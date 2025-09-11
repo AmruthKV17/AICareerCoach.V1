@@ -5,6 +5,7 @@ interface InterviewQuestionsRequest {
   job_posting_url: string
 }
 
+
 export async function POST(request: Request) {
   try {
     const body: InterviewQuestionsRequest = await request.json()

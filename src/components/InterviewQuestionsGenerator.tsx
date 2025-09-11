@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInterviewQuestions } from '@/context/InterviewQuestionsContext'
+import { questionsList } from '@/data/questionsList'
 
 interface InterviewQuestionsProps {}
 
@@ -21,23 +22,27 @@ export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps)
     setError(null)
 
     try {
-      const response = await fetch('/api/generate-interview-questions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          job_posting_url: jobUrl.trim()
-        })
-      })
+      // const response = await fetch('/api/generate-interview-questions', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({
+      //     job_posting_url: jobUrl.trim()
+      //   })
+      // })
 
-      const data = await response.json()
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to generate questions')
-      }
+      // const data = await response.json()
 
-      setQuestions(data.data)
+      // if (!data.success) {
+      //   throw new Error(data.error || 'Failed to generate questions')
+      // }
+
+      // setQuestions(data.data)
+      setQuestions(questionsList);
+      console.log(questions);
+      
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {

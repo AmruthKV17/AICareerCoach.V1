@@ -1,6 +1,6 @@
-import { InterviewQuestions } from '@/types/questions';
+// import { InterviewQuestions } from '@/types/questions';
 
-export const questionsList: InterviewQuestions = {
+export const questionsList= {
   "technical-questions": [
     "Can you describe your experience with creative direction in film projects and how it has influenced your approach to storytelling?",
     "What tools or techniques do you utilize in creative writing, and how do you ensure they align with the evolving trends in film production?",
