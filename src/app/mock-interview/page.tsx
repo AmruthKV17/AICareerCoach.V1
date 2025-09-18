@@ -77,8 +77,8 @@ Key Guidelines:
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">Mock Interview Session</h1>
+    <div className="w-full h-full ">
+      {/* <h1 className="text-3xl font-bold mb-8">Mock Interview Session</h1>
       <div className="bg-white shadow-lg rounded-lg p-6">
         <div className="space-y-6">
           <div className="text-center">
@@ -105,7 +105,7 @@ Key Guidelines:
             </p>
           </div>
         </div>
-      </div>
+      </div> */}
       
       {/* VapiWidget for voice interaction */}
       <VapiWidget 
