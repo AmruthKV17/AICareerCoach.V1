@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useInterviewQuestions } from '@/context/InterviewQuestionsContext'
 import { questionsList } from '@/data/questionsList'
+import { SessionUtils } from '@/lib/sessionUtils'
 
 interface InterviewQuestionsProps {}
 
@@ -12,6 +13,8 @@ export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps)
   const [jobUrl, setJobUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [useDummyData, setUseDummyData] = useState(true) // Default to true for testing
+  const [sessionId, setSessionId] = useState<string | null>(null)
   const { questions, setQuestions } = useInterviewQuestions()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,26 +25,29 @@ export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps)
     setError(null)
 
     try {
-      // const response = await fetch('/api/generate-interview-questions', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     job_posting_url: jobUrl.trim()
-      //   })
-      // })
+      const response = await fetch('/api/generate-interview-questions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          job_posting_url: jobUrl.trim(),
+          use_dummy_data: useDummyData
+        })
+      })
 
+      const data = await response.json()
+      console.log('Response Data:', data);
 
-      // const data = await response.json()
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate questions')
+      }
 
-      // if (!data.success) {
-      //   throw new Error(data.error || 'Failed to generate questions')
-      // }
-
-      // setQuestions(data.data)
-      setQuestions(questionsList);
-      console.log(questions);
+      setQuestions(data.data)
+      setSessionId(data.sessionId) // Store the session ID
+      SessionUtils.setSessionId(data.sessionId) // Store in localStorage
+      console.log('Questions set:', data.data);
+      console.log('Session ID:', data.sessionId);
       
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -59,22 +65,39 @@ export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps)
       <h1 className="text-3xl font-bold mb-6">Interview Questions Generator</h1>
       
       <form onSubmit={handleSubmit} className="mb-6">
-        <div className="flex gap-4">
-          <input
-            type="url"
-            value={jobUrl}
-            onChange={(e) => setJobUrl(e.target.value)}
-            placeholder="Enter job posting URL..."
-            className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-            required
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
-          >
-            {loading ? 'Generating...' : 'Generate Questions'}
-          </button>
+        <div className="space-y-4">
+          <div className="flex gap-4">
+            <input
+              type="url"
+              value={jobUrl}
+              onChange={(e) => setJobUrl(e.target.value)}
+              placeholder="Enter job posting URL..."
+              className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
+            >
+              {loading ? 'Generating...' : 'Generate Questions'}
+            </button>
+          </div>
+          
+          {/* Toggle for dummy data */}
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useDummyData}
+                onChange={(e) => setUseDummyData(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                Use dummy data for testing (React Native questions)
+              </span>
+            </label>
+          </div>
         </div>
       </form>
 
@@ -86,6 +109,39 @@ export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps)
 
       {questions && (
         <>
+          {/* Session ID Display */}
+          {sessionId && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-blue-800">Interview Session Created</h3>
+                  <p className="text-sm text-blue-600">Session ID: <code className="bg-blue-100 px-2 py-1 rounded">{sessionId}</code></p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(sessionId);
+                      alert('Session ID copied to clipboard!');
+                    }}
+                    className="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Copy Session ID
+                  </button>
+                  <button
+                    onClick={() => {
+                      const shareableURL = SessionUtils.getShareableURL(sessionId);
+                      navigator.clipboard.writeText(shareableURL);
+                      alert('Shareable URL copied to clipboard!');
+                    }}
+                    className="text-sm px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    Copy Shareable URL
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white border rounded-lg p-6 space-y-6">
             <h2 className="text-xl font-semibold mb-4">Interview Questions</h2>
             

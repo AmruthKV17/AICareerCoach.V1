@@ -1,21 +1,61 @@
 import { NextResponse } from 'next/server'
-import { useInterviewQuestions } from '@/context/InterviewQuestionsContext';
+import { InterviewService } from '@/lib/interviewService'
+import { InterviewMetadata } from '@/types/interview'
+import { dummyInterviewData, dummyInterviewMetadata } from '@/types/questions'
 
 interface InterviewQuestionsRequest {
   job_posting_url: string
+  use_dummy_data?: boolean
 }
 
 
 export async function POST(request: Request) {
   try {
     const body: InterviewQuestionsRequest = await request.json()
-    const { job_posting_url } = body
+    const { job_posting_url, use_dummy_data = false } = body
 
     if (!job_posting_url) {
       return NextResponse.json(
         { success: false, error: 'Job posting URL is required' },
         { status: 400 }
       )
+    }
+
+    // Use dummy data for testing if requested
+    if (use_dummy_data) {
+      try {
+        // Create metadata from dummy data
+        const metadata: InterviewMetadata = {
+          expected_keywords: dummyInterviewMetadata.expected_keywords,
+          difficulty: dummyInterviewMetadata.difficulty as 'easy' | 'medium' | 'hard',
+          topic: dummyInterviewMetadata.topic
+        };
+
+        // Store only the metadata in MongoDB
+        const sessionId = await InterviewService.createInterviewSession(
+          job_posting_url,
+          metadata
+        );
+
+        console.log('Dummy interview session stored with ID:', sessionId);
+
+        return NextResponse.json({
+          success: true,
+          data: dummyInterviewData,
+          metadata: dummyInterviewMetadata,
+          sessionId: sessionId,
+          message: 'Using dummy data for testing'
+        });
+      } catch (dbError) {
+        console.error('Database error with dummy data:', dbError);
+        // Still return the dummy data even if database storage fails
+        return NextResponse.json({
+          success: true,
+          data: dummyInterviewData,
+          metadata: dummyInterviewMetadata,
+          warning: 'Dummy data generated but failed to save to database'
+        });
+      }
     }
 
     const response = await fetch('https://interview-questions-generator-v1-147660c7-2-48dda158.crewai.com/kickoff', {
@@ -77,6 +117,8 @@ export async function POST(request: Request) {
 
         if (status === 'SUCCESS') {
           console.log('Task completed successfully');
+          console.log('Result:', result.last_executed_task);
+          
           let output = result.last_executed_task.output;
           
           // Clean the output string if needed
@@ -95,11 +137,37 @@ export async function POST(request: Request) {
             console.log('Raw output:', output);
             throw new Error('Failed to parse interview questions');
           }
-          
-          return NextResponse.json({
-            success: true,
-            data: questions
-          });
+
+          // Store only metadata in MongoDB
+          try {
+            // Extract metadata from the questions response
+            const metadata: InterviewMetadata = {
+              expected_keywords: questions.expected_keywords || [],
+              difficulty: questions.difficulty || 'medium',
+              topic: questions.topic || 'Interview'
+            };
+
+            const sessionId = await InterviewService.createInterviewSession(
+              job_posting_url,
+              metadata
+            );
+            
+            console.log('Interview session stored with ID:', sessionId);
+
+            return NextResponse.json({
+              success: true,
+              data: questions,
+              sessionId: sessionId
+            });
+          } catch (dbError) {
+            console.error('Database error:', dbError);
+            // Still return the questions even if database storage fails
+            return NextResponse.json({
+              success: true,
+              data: questions,
+              warning: 'Questions generated but failed to save to database'
+            });
+          }
         } else if (status === 'FAILED') {
           throw new Error('Task processing failed');
         }

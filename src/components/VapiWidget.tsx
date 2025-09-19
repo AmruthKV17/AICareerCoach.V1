@@ -6,12 +6,17 @@ import { Mic, Phone } from 'lucide-react';
 
 import { cn } from "@/lib/utils";
 import Vapi from '@vapi-ai/web';
+import { QAExporter, QAPair } from '@/lib/exportUtils';
 
 interface VapiWidgetProps {
   apiKey: string;
   assistantId?: string;
   assistantOptions?: any;
   config?: Record<string, unknown>;
+  autoExport?: boolean;
+  exportFormat?: 'json' | 'txt' | 'csv';
+  onExport?: (qaPairs: QAPair[]) => void;
+  sessionId?: string;
 }
 
 enum CallStatus {
@@ -25,7 +30,11 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
   apiKey, 
   assistantId, 
   assistantOptions,
-  config = {} 
+  config = {},
+  autoExport = false,
+  exportFormat = 'json',
+  onExport,
+  sessionId
 }) => {
   const [vapi, setVapi] = useState<Vapi | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
@@ -38,7 +47,89 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
   const [qaPairs, setQaPairs] = useState<Array<{ question: string, answer: string }>>([]);
   const [pendingQuestion, setPendingQuestion] = useState<string | null>(null);
   const [showJson, setShowJson] = useState(false);
+  const [isWaitingForCompleteQuestion, setIsWaitingForCompleteQuestion] = useState(false);
+  const [isSavingToDatabase, setIsSavingToDatabase] = useState(false);
+  const [databaseSaveStatus, setDatabaseSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const pendingQuestionRef = useRef<string | null>(null);
+  const userResponseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentUserResponseRef = useRef<string>('');
+  const assistantQuestionBufferRef = useRef<string>('');
+  const questionCompleteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastCompleteQuestionRef = useRef<string>('');
+  const userAnswerBufferRef = useRef<string>('');
+
+  // Function to verify QA pairs were saved to database
+  const verifyQAPairsSaved = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/interview-sessions/${sessionId}/qa-pairs`);
+      const data = await response.json();
+      
+      if (data.success && data.data.length === qaPairs.length) {
+        console.log('✅ QA pairs verified in database:', data.data.length, 'pairs saved');
+        return true;
+      } else {
+        console.warn('⚠️ QA pairs count mismatch in database');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error verifying QA pairs:', error);
+      return false;
+    }
+  };
+
+  // Helper function to detect if text looks like a complete question
+  const isCompleteQuestion = (text: string): boolean => {
+    const trimmed = text.trim();
+    if (trimmed.length < 30) return false; // Must be substantial
+    
+    // Check for strong question indicators
+    const strongQuestionPatterns = [
+      /\?$/, // Ends with question mark
+      /^(can you|could you|what|how|why|when|where|which|who|do you|have you|are you|is there|would you|tell me|explain|describe|provide|give me|show me)/i, // Starts with question words
+      /(tell me about|explain how|describe your|what is your|how do you|can you tell me|could you explain)/i, // Strong question patterns
+    ];
+    
+    // Check for weak patterns that might be questions
+    const weakQuestionPatterns = [
+      /(experience with|familiarity with|approach to|process for|strategy for)/i,
+    ];
+    
+    // Must have strong patterns OR (weak patterns AND be long enough)
+    const hasStrongPattern = strongQuestionPatterns.some(pattern => pattern.test(trimmed));
+    const hasWeakPattern = weakQuestionPatterns.some(pattern => pattern.test(trimmed));
+    const isLongEnough = trimmed.length > 50;
+    
+    return hasStrongPattern || (hasWeakPattern && isLongEnough);
+  };
+
+  // Helper function to detect if text is just acknowledgment/filler
+  const isAcknowledgment = (text: string): boolean => {
+    const trimmed = text.trim().toLowerCase();
+    const acknowledgments = [
+      'got it', 'nice', 'great job', 'alright', 'okay', 'ok', 'yeah', 'yes', 
+      'continue', 'go ahead', 'sure', 'right', 'exactly', 'perfect', 'good',
+      'take your time', 'no problem', 'sounds good', 'that\'s right',
+      'let\'s get started', 'next up', 'moving on', 'now', 'so', 'i see',
+      'i see where you\'re going', 'good start', 'that\'s good', 'excellent',
+      'wonderful', 'great', 'awesome', 'nice work', 'well done'
+    ];
+    
+    return acknowledgments.includes(trimmed) || trimmed.length < 25;
+  };
+
+  // Helper function to detect if text is a question fragment (part of a larger question)
+  const isQuestionFragment = (text: string): boolean => {
+    const trimmed = text.trim().toLowerCase();
+    
+    // Common question fragments that should be accumulated
+    const fragmentPatterns = [
+      /^(in|with|for|about|regarding|concerning|specifically|particularly|especially)/i,
+      /^(like|such as|for example|including|such as)/i,
+      /^(and|or|but|so|then|next|also|additionally)/i,
+    ];
+    
+    return fragmentPatterns.some(pattern => pattern.test(trimmed)) || trimmed.length < 20;
+  };
 
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
@@ -68,8 +159,104 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
       setIsUserSpeaking(false);
       setTranscript([]);
       setCurrentMessage(null);
+      
+      // Clear any pending timeouts
+      if (userResponseTimeoutRef.current) {
+        clearTimeout(userResponseTimeoutRef.current);
+        userResponseTimeoutRef.current = null;
+      }
+      if (questionCompleteTimeoutRef.current) {
+        clearTimeout(questionCompleteTimeoutRef.current);
+        questionCompleteTimeoutRef.current = null;
+      }
+      
+      // Process any final pending user response
+      if (userAnswerBufferRef.current.trim() && lastCompleteQuestionRef.current) {
+        const pair = { 
+          question: lastCompleteQuestionRef.current, 
+          answer: userAnswerBufferRef.current.trim() 
+        };
+        console.log('Final QA pair saved (call end):', pair);
+        setQaPairs(prev => [...prev, pair]);
+        userAnswerBufferRef.current = '';
+        currentUserResponseRef.current = '';
+        setPendingQuestion(null);
+        pendingQuestionRef.current = null;
+      }
+      
       // reveal collected answers for confirmation
       setShowJson(true);
+      
+      // Auto-export if enabled
+      if (autoExport && qaPairs.length > 0) {
+        try {
+          QAExporter.export(qaPairs, { format: exportFormat });
+          console.log(`Auto-exported QA pairs in ${exportFormat} format`);
+        } catch (error) {
+          console.error('Auto-export failed:', error);
+        }
+      }
+      
+      // Call onExport callback if provided
+      if (onExport && qaPairs.length > 0) {
+        onExport(qaPairs);
+      }
+
+      // Save QA pairs to database if sessionId is provided
+      console.log('🔍 Call end - Checking conditions:', { 
+        hasSessionId: !!sessionId, 
+        qaPairsLength: qaPairs.length,
+        sessionId: sessionId 
+      });
+      
+      if (sessionId && qaPairs.length > 0) {
+        console.log(`💾 Saving ${qaPairs.length} QA pairs to database for session: ${sessionId}`);
+        console.log('📝 QA Pairs to save:', qaPairs);
+        setIsSavingToDatabase(true);
+        setDatabaseSaveStatus('saving');
+        
+        fetch(`/api/interview-sessions/${sessionId}/qa-pairs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qaPairs })
+        })
+        .then(async response => {
+          if (response.ok) {
+            console.log('QA pairs saved to database successfully');
+            setDatabaseSaveStatus('success');
+            
+            // Verify the save was successful
+            const verified = await verifyQAPairsSaved(sessionId);
+            if (verified) {
+              console.log('✅ Database save verified successfully');
+            } else {
+              console.warn('⚠️ Database save verification failed');
+            }
+            
+            // Auto-hide success message after 3 seconds
+            setTimeout(() => setDatabaseSaveStatus('idle'), 3000);
+          } else {
+            console.error('Failed to save QA pairs to database');
+            setDatabaseSaveStatus('error');
+            // Auto-hide error message after 5 seconds
+            setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
+          }
+        })
+        .catch(error => {
+          console.error('Error saving QA pairs:', error);
+          setDatabaseSaveStatus('error');
+          // Auto-hide error message after 5 seconds
+          setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
+        })
+        .finally(() => {
+          setIsSavingToDatabase(false);
+        });
+      } else if (!sessionId && qaPairs.length > 0) {
+        console.warn('⚠️ No sessionId provided - QA pairs will not be saved to database');
+        console.log('📝 QA Pairs that would have been saved:', qaPairs);
+      } else if (sessionId && qaPairs.length === 0) {
+        console.warn('⚠️ SessionId provided but no QA pairs to save');
+      }
     });
 
     vapiInstance.on('speech-start', () => {
@@ -111,29 +298,32 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
           });
         }
         
-        // Track user speaking based on transcript updates
+        // Handle user responses
         if (normalizedRole === 'user') {
-          console.log('User speaking detected');
+          console.log('User speaking detected:', newText);
           setIsUserSpeaking(true);
 
-          // If there is a pending assistant question, pair it with user's final answer
-          if (pendingQuestionRef.current && newText && newText.trim().length > 0) {
-            const pair = { question: pendingQuestionRef.current, answer: newText.trim() };
-            console.log('QA pair saved:', pair);
-            setQaPairs(prev => [...prev, pair]);
-            setPendingQuestion(null);
-            pendingQuestionRef.current = null;
-          } else if (!pendingQuestion) {
-            // Fallback: try to find last assistant message from transcript/currentMessage
-            const lastAssistant = (currentMessage && currentMessage.role === 'assistant')
-              ? currentMessage.text
-              : [...transcript].reverse().find(m => m.role === 'assistant')?.text;
-            if (lastAssistant && newText && newText.trim()) {
-              const pair = { question: lastAssistant, answer: newText.trim() };
-              console.log('QA pair saved (fallback):', pair);
-              setQaPairs(prev => [...prev, pair]);
-            }
+          // Clear any existing timeout
+          if (userResponseTimeoutRef.current) {
+            clearTimeout(userResponseTimeoutRef.current);
           }
+          
+          // Accumulate user response in buffer
+          if (userAnswerBufferRef.current) {
+            userAnswerBufferRef.current += ' ' + newText;
+          } else {
+            userAnswerBufferRef.current = newText;
+          }
+          currentUserResponseRef.current = userAnswerBufferRef.current;
+          
+          console.log('User answer buffer:', userAnswerBufferRef.current);
+          
+          // Set a timeout to capture complete user response
+          userResponseTimeoutRef.current = setTimeout(() => {
+            console.log('User response timeout - finalizing answer:', userAnswerBufferRef.current);
+            setIsUserSpeaking(false);
+            // Don't process here - wait for assistant to start speaking
+          }, 3000);
           
           // If assistant was speaking and user starts, finalize assistant's message
           if (currentMessage && currentMessage.role === 'assistant') {
@@ -141,14 +331,81 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
             setCurrentMessage(null);
           }
           
-          // Reset after a short delay
-          setTimeout(() => setIsUserSpeaking(false), 1000);
         } else if (normalizedRole === 'assistant') {
-          // Treat every assistant final utterance as the next pending question
-          const maybeQuestion = newText?.trim();
-          if (maybeQuestion && maybeQuestion.length > 0) {
-            setPendingQuestion(maybeQuestion);
-            pendingQuestionRef.current = maybeQuestion;
+          console.log('Assistant speaking detected:', newText);
+          
+          // CRITICAL: When assistant starts speaking, save the user's complete answer
+          if (userAnswerBufferRef.current.trim() && lastCompleteQuestionRef.current) {
+            const pair = { 
+              question: lastCompleteQuestionRef.current, 
+              answer: userAnswerBufferRef.current.trim() 
+            };
+            console.log('QA pair saved (assistant started speaking):', pair);
+            setQaPairs(prev => [...prev, pair]);
+            userAnswerBufferRef.current = '';
+            currentUserResponseRef.current = '';
+          }
+          
+          // Clear any pending user response timeout when assistant speaks
+          if (userResponseTimeoutRef.current) {
+            clearTimeout(userResponseTimeoutRef.current);
+            userResponseTimeoutRef.current = null;
+          }
+          
+          // Accumulate assistant text in buffer
+          const assistantText = newText?.trim();
+          if (assistantText && assistantText.length > 0) {
+            // If we already have text in buffer, append with space
+            if (assistantQuestionBufferRef.current) {
+              assistantQuestionBufferRef.current += ' ' + assistantText;
+            } else {
+              assistantQuestionBufferRef.current = assistantText;
+            }
+            
+            console.log('Assistant text accumulated:', assistantQuestionBufferRef.current);
+            
+            // Clear any existing question timeout
+            if (questionCompleteTimeoutRef.current) {
+              clearTimeout(questionCompleteTimeoutRef.current);
+            }
+            
+            // Check if this looks like a complete question immediately
+            const currentBuffer = assistantQuestionBufferRef.current.trim();
+            if (isCompleteQuestion(currentBuffer) && !isAcknowledgment(currentBuffer)) {
+              // It's a complete question, store it as the last complete question
+              lastCompleteQuestionRef.current = currentBuffer;
+              setPendingQuestion(currentBuffer);
+              pendingQuestionRef.current = currentBuffer;
+              setIsWaitingForCompleteQuestion(false);
+              console.log('Complete question detected and stored:', currentBuffer);
+              assistantQuestionBufferRef.current = '';
+            } else if (isAcknowledgment(currentBuffer)) {
+              // It's just an acknowledgment, ignore it
+              console.log('Acknowledgment detected, ignoring:', currentBuffer);
+              assistantQuestionBufferRef.current = '';
+            } else {
+              // Set waiting state and timeout to check if this becomes a complete question
+              setIsWaitingForCompleteQuestion(true);
+              questionCompleteTimeoutRef.current = setTimeout(() => {
+                const completeText = assistantQuestionBufferRef.current.trim();
+                console.log('Checking if accumulated text is complete question:', completeText);
+                
+                // Only set as pending question if it looks like a real question
+                if (isCompleteQuestion(completeText) && !isAcknowledgment(completeText)) {
+                  lastCompleteQuestionRef.current = completeText;
+                  setPendingQuestion(completeText);
+                  pendingQuestionRef.current = completeText;
+                  setIsWaitingForCompleteQuestion(false);
+                  console.log('Complete question set after timeout:', completeText);
+                } else {
+                  console.log('Not a complete question after timeout, ignoring:', completeText);
+                  setIsWaitingForCompleteQuestion(false);
+                }
+                
+                // Clear the buffer
+                assistantQuestionBufferRef.current = '';
+              }, 3000); // Wait 3 seconds after assistant stops speaking
+            }
           }
         }
       }
@@ -159,6 +416,15 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
     });
 
     return () => {
+      // Clear any pending timeouts
+      if (userResponseTimeoutRef.current) {
+        clearTimeout(userResponseTimeoutRef.current);
+        userResponseTimeoutRef.current = null;
+      }
+      if (questionCompleteTimeoutRef.current) {
+        clearTimeout(questionCompleteTimeoutRef.current);
+        questionCompleteTimeoutRef.current = null;
+      }
       vapiInstance?.stop();
     };
     startCall();
@@ -175,9 +441,28 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
     }
   };
 
-  const endCall = () => {
+  const endCall = async () => {
     if (vapi) {
       vapi.stop();
+    }
+    try {
+      const response = await fetch(`/api/interview-sessions/${sessionId}/qa-pairs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qaPairs })
+      });
+      
+      if (response.ok) {
+        setDatabaseSaveStatus('success');
+        setTimeout(() => setDatabaseSaveStatus('idle'), 3000);
+      } else {
+        setDatabaseSaveStatus('error');
+        setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
+      }
+    } catch (error) {
+      console.error('Error saving QA pairs:', error);
+      setDatabaseSaveStatus('error');
+      setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
     }
   };
 
@@ -330,12 +615,29 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
       )}
 
       {/* Live QA Pairs Viewer */}
-      {(pendingQuestion || qaPairs.length > 0) && (
+      {(pendingQuestion || qaPairs.length > 0 || userAnswerBufferRef.current || assistantQuestionBufferRef.current || isWaitingForCompleteQuestion) && (
         <div className="w-full max-w-3xl mb-6">
           <div className="bg-white rounded-2xl shadow-md p-6">
             <h4 className="font-semibold text-lg mb-2">QA Pairs (Live)</h4>
             {pendingQuestion && (
-              <p className="text-sm text-gray-600 mb-2">Pending question: <span className="text-gray-900">{pendingQuestion}</span></p>
+              <p className="text-sm text-gray-600 mb-2">
+                Pending question: <span className="text-gray-900">{pendingQuestion}</span>
+              </p>
+            )}
+            {isWaitingForCompleteQuestion && !pendingQuestion && (
+              <p className="text-sm text-yellow-600 mb-2">
+                Waiting for complete question...
+              </p>
+            )}
+            {assistantQuestionBufferRef.current && !pendingQuestion && !isWaitingForCompleteQuestion && (
+              <p className="text-sm text-orange-600 mb-2">
+                Building question: <span className="text-gray-900">{assistantQuestionBufferRef.current}</span>
+              </p>
+            )}
+            {userAnswerBufferRef.current && (
+              <p className="text-sm text-blue-600 mb-2">
+                User answer buffer: <span className="text-gray-900">{userAnswerBufferRef.current}</span>
+              </p>
             )}
             {qaPairs.length === 0 ? (
               <p className="text-sm text-gray-600">No pairs recorded yet.</p>
@@ -399,25 +701,118 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
           : "Interview in Progress..."}
       </p>
 
+      {/* Database Save Status */}
+      <div className="text-center mb-3">
+        {!sessionId && (
+          <p className="text-yellow-600 text-sm">
+            ⚠️ No session ID - Interview data will not be saved to database
+          </p>
+        )}
+        {sessionId && (
+          <p className="text-gray-500 text-xs">
+            📋 Session ID: {sessionId}
+          </p>
+        )}
+        {sessionId && databaseSaveStatus === 'saving' && (
+          <p className="text-blue-600 text-sm">
+            💾 Saving interview data to database...
+          </p>
+        )}
+        {sessionId && databaseSaveStatus === 'success' && (
+          <p className="text-green-600 text-sm">
+            ✅ Interview data saved successfully! ({qaPairs.length} QA pairs)
+          </p>
+        )}
+        {sessionId && databaseSaveStatus === 'error' && (
+          <p className="text-red-600 text-sm">
+            ❌ Failed to save interview data
+          </p>
+        )}
+      </div>
+
       {/* Answers JSON Confirmation */}
       {showJson && qaPairs.length > 0 && (
         <div className="w-full max-w-3xl mb-10">
           <div className="bg-white rounded-2xl shadow-md p-6">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-lg">Collected Answers (JSON)</h4>
+              <div className="flex gap-2">
+                {sessionId && (
+                  <button
+                    onClick={async () => {
+                      if (qaPairs.length === 0) {
+                        alert('No QA pairs to save');
+                        return;
+                      }
+                      
+                      setIsSavingToDatabase(true);
+                      setDatabaseSaveStatus('saving');
+                      
+                      try {
+                        const response = await fetch(`/api/interview-sessions/${sessionId}/qa-pairs`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ qaPairs })
+                        });
+                        
+                        if (response.ok) {
+                          setDatabaseSaveStatus('success');
+                          setTimeout(() => setDatabaseSaveStatus('idle'), 3000);
+                        } else {
+                          setDatabaseSaveStatus('error');
+                          setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
+                        }
+                      } catch (error) {
+                        console.error('Error saving QA pairs:', error);
+                        setDatabaseSaveStatus('error');
+                        setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
+                      } finally {
+                        setIsSavingToDatabase(false);
+                      }
+                    }}
+                    disabled={isSavingToDatabase || qaPairs.length === 0}
+                    className={`text-sm px-3 py-1.5 rounded-md ${
+                      isSavingToDatabase 
+                        ? 'bg-gray-400 cursor-not-allowed' 
+                        : 'bg-indigo-600 hover:bg-indigo-700'
+                    } text-white`}
+                  >
+                    {isSavingToDatabase ? 'Saving...' : 'Save to Database'}
+                  </button>
+                )}
               <button
                 onClick={async () => {
                   try {
-                    await navigator.clipboard.writeText(JSON.stringify(qaPairs, null, 2));
-                    alert('Copied to clipboard');
+                      await QAExporter.copyToClipboard(qaPairs, 'json');
+                      alert('JSON copied to clipboard');
                   } catch (e) {
                     console.error(e);
+                      alert('Failed to copy to clipboard');
                   }
                 }}
                 className="text-sm px-3 py-1.5 rounded-md bg-gray-800 text-white hover:bg-gray-700"
               >
-                Copy
+                  Copy JSON
+                </button>
+                <button
+                  onClick={() => QAExporter.export(qaPairs, { format: 'json' })}
+                  className="text-sm px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                >
+                  Download JSON
+                </button>
+                <button
+                  onClick={() => QAExporter.export(qaPairs, { format: 'txt' })}
+                  className="text-sm px-3 py-1.5 rounded-md bg-green-600 text-white hover:bg-green-700"
+                >
+                  Download TXT
+                </button>
+                <button
+                  onClick={() => QAExporter.export(qaPairs, { format: 'csv' })}
+                  className="text-sm px-3 py-1.5 rounded-md bg-purple-600 text-white hover:bg-purple-700"
+                >
+                  Download CSV
               </button>
+              </div>
             </div>
             <pre className="text-sm bg-gray-50 rounded-md p-3 overflow-x-auto whitespace-pre-wrap">
 {JSON.stringify(qaPairs, null, 2)}

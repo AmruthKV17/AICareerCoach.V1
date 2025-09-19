@@ -1,11 +1,25 @@
 // // filepath: c:\Users\amrut\OneDrive\Desktop\AIMockInterview.v1\my-app\src\app\mock-interview\page.tsx
 "use client"
 
+import { useState, useEffect } from 'react'
 import VapiWidget from '@/components/VapiWidget'
 import { useInterviewQuestions } from '@/context/InterviewQuestionsContext'
+import { SessionUtils } from '@/lib/sessionUtils'
 
 export default function MockInterviewPage() {
   const { questions } = useInterviewQuestions()
+  const [sessionId, setSessionId] = useState<string | null>(null)
+
+  // Get sessionId from localStorage or URL
+  useEffect(() => {
+    const sessionInfo = SessionUtils.getSessionInfo()
+    if (sessionInfo.sessionId) {
+      setSessionId(sessionInfo.sessionId)
+      console.log('📋 Session ID found:', sessionInfo.sessionId, 'from', sessionInfo.source)
+    } else {
+      console.warn('⚠️ No session ID found. QA pairs will not be saved to database.')
+    }
+  }, [])
 
   if (!questions) {
     return (
@@ -111,6 +125,7 @@ Key Guidelines:
       <VapiWidget 
         apiKey={process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY as string} 
         assistantOptions={assistantOptions}
+        sessionId={sessionId || undefined}
       />
     </div>
   )
