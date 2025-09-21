@@ -9,7 +9,7 @@ interface RouteParams {
 
 export async function POST(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const { qaPairs } = body
     
@@ -51,7 +51,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
-    const { id } = params
+    const { id } = await params
     
     if (!id) {
       return NextResponse.json(

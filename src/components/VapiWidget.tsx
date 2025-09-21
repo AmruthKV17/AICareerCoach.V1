@@ -445,25 +445,41 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
     if (vapi) {
       vapi.stop();
     }
-    try {
-      const response = await fetch(`/api/interview-sessions/${sessionId}/qa-pairs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ qaPairs })
-      });
-      
-      if (response.ok) {
-        setDatabaseSaveStatus('success');
-        setTimeout(() => setDatabaseSaveStatus('idle'), 3000);
-      } else {
+    
+    // Save QA pairs to database first
+    if (sessionId && qaPairs.length > 0) {
+      try {
+        const response = await fetch(`/api/interview-sessions/${sessionId}/qa-pairs`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ qaPairs })
+        });
+        
+        if (response.ok) {
+          setDatabaseSaveStatus('success');
+          console.log('✅ QA pairs saved successfully');
+        } else {
+          setDatabaseSaveStatus('error');
+          console.error('❌ Failed to save QA pairs');
+        }
+      } catch (error) {
+        console.error('❌ Error saving QA pairs:', error);
         setDatabaseSaveStatus('error');
-        setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
       }
-    } catch (error) {
-      console.error('Error saving QA pairs:', error);
-      setDatabaseSaveStatus('error');
-      setTimeout(() => setDatabaseSaveStatus('idle'), 5000);
     }
+    
+    // Navigate to feedback page after a short delay
+    setTimeout(() => {
+      if (sessionId) {
+        console.log('🔄 Navigating to feedback page for session:', sessionId);
+        // Show loading state
+        setDatabaseSaveStatus('saving');
+        window.location.href = `/feedback/${sessionId}`;
+      } else {
+        console.warn('⚠️ No sessionId available for feedback page');
+        alert('Interview ended, but no session ID available for feedback.');
+      }
+    }, 2000); // 2 second delay to show save status
   };
 
   const toggleMic = () => {
@@ -720,7 +736,7 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
         )}
         {sessionId && databaseSaveStatus === 'success' && (
           <p className="text-green-600 text-sm">
-            ✅ Interview data saved successfully! ({qaPairs.length} QA pairs)
+            ✅ Interview data saved successfully! ({qaPairs.length} QA pairs) - Redirecting to feedback page...
           </p>
         )}
         {sessionId && databaseSaveStatus === 'error' && (
