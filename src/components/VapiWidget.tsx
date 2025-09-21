@@ -2,11 +2,14 @@
 import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mic, Phone } from 'lucide-react';
+import { Mic, Phone, MessageSquare, Brain, User, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 import { cn } from "@/lib/utils";
 import Vapi from '@vapi-ai/web';
+
 import { QAExporter, QAPair } from '@/lib/exportUtils';
+import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern';
 
 interface VapiWidgetProps {
   apiKey: string;
@@ -552,199 +555,492 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
   //   </div>
   // );
   return (
-    <div className="min-h-screen flex flex-col items-center bg-gray-100">
-      {/* Header */}
-      <h2 className="font-bold text-2xl mt-10 mb-8 text-center">
-        AI Interview Session
-      </h2>
-
-      {/* Main Content Grid */}
-      <div className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-         {/* AI Recruiter Box */}
-         <div className="flex flex-col items-center justify-center rounded-2xl bg-white shadow-md py-10">
-           <div className="relative">
-             {isSpeaking && <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-50" style={{zIndex: 1}} />}
-             <Image
-               src="/ai-profile.jpeg"
-               alt="AI Recruiter"
-               width={100}
-               height={100}
-               className="rounded-full mb-4 relative"
-               style={{zIndex: 2}}
-             />
-           </div>
-           <h3 className="font-medium text-lg mt-10">AI Recruiter</h3>
-         </div>
-
-         {/* User Box */}
-         <div className="flex flex-col items-center justify-center rounded-2xl bg-white shadow-md py-10">
-           <div className="relative">
-             {isUserSpeaking && <span className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-75" style={{zIndex: 1}} />}
-             <Image
-               src="/user-profile.jpeg"
-               alt="profile-image"
-               width={100}
-               height={100}
-               className="rounded-full mb-4 object-cover relative"
-               style={{zIndex: 2}}
-             />
-           </div>
-           <h3 className="font-medium text-lg mt-10">You</h3>
-         </div>
+    <div className="relative min-h-screen flex flex-col items-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-neutral-950 dark:via-blue-950/20 dark:to-indigo-950/20 overflow-hidden">
+      {/* Animated Background */}
+      <div className="absolute inset-0 z-0">
+        <AnimatedGridPattern
+          numSquares={20}
+          maxOpacity={0.08}
+          duration={5}
+          repeatDelay={2}
+          className={cn(
+            "[mask-image:radial-gradient(1000px_circle_at_center,white,transparent)]",
+            "fill-blue-500/10 stroke-blue-500/10 dark:fill-blue-400/10 dark:stroke-blue-400/10",
+          )}
+        />
       </div>
+      
+      <div className="relative z-10 w-full flex flex-col items-center">
+        {/* Enhanced Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-center mt-10 mb-12"
+        >
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+              className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"
+            >
+              <Brain className="w-8 h-8 text-white" />
+            </motion.div>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              AI Interview Session
+            </h1>
+          </div>
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            Experience the future of interviews with our AI-powered conversation system
+          </p>
+        </motion.div>
 
-      {/* Transcript Display */}
-      { transcript.length > 0 && (
-        <div className="w-full max-w-3xl mb-6">
-          <div className="bg-white rounded-2xl shadow-md p-6">
+        {/* Enhanced Main Content Grid */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.3, duration: 0.8 }}
+          className="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 px-6"
+        >
+          {/* AI Recruiter Box */}
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            className="relative group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-3xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative flex flex-col items-center justify-center rounded-3xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-xl border border-white/20 py-12 px-8">
+              <div className="relative mb-6">
+                {isSpeaking && (
+                  <>
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-30"
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 1.4, 1] }}
+                      transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                      className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 opacity-20"
+                    />
+                  </>
+                )}
+                <div className="relative z-10 p-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full">
+                  <Image
+                    src="/ai-profile.jpeg"
+                    alt="AI Recruiter"
+                    width={120}
+                    height={120}
+                    className="rounded-full object-cover"
+                  />
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-2">AI Recruiter</h3>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <Brain className="w-4 h-4" />
+                  <span>{isSpeaking ? 'Speaking...' : 'Listening'}</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* User Box */}
+          <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            className="relative group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-blue-500 rounded-3xl blur opacity-20 group-hover:opacity-30 transition-opacity"></div>
+            <div className="relative flex flex-col items-center justify-center rounded-3xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl shadow-xl border border-white/20 py-12 px-8">
+              <div className="relative mb-6">
+                {isUserSpeaking && (
+                  <>
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="absolute inset-0 rounded-full bg-gradient-to-r from-green-400 to-blue-500 opacity-40"
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 1.4, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                      className="absolute inset-0 rounded-full bg-gradient-to-r from-green-400 to-blue-500 opacity-25"
+                    />
+                  </>
+                )}
+                <div className="relative z-10 p-1 bg-gradient-to-r from-green-500 to-blue-600 rounded-full">
+                  <Image
+                    src="/user-profile.jpeg"
+                    alt="profile-image"
+                    width={120}
+                    height={120}
+                    className="rounded-full object-cover"
+                  />
+                </div>
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-xl text-gray-800 dark:text-white mb-2">You</h3>
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                  <User className="w-4 h-4" />
+                  <span>{isUserSpeaking ? 'Speaking...' : 'Ready'}</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Enhanced Transcript Display */}
+        { transcript.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-4xl mb-8 px-6"
+          >
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <MessageSquare className="w-6 h-6 text-blue-600" />
+                <h3 className="text-xl font-bold text-gray-800 dark:text-white">Live Conversation</h3>
+              </div>
             {/* <p
               key={transcript[transcript.length - 1].text}
               className="transition-opacity duration-500 opacity-0 animate-fadeIn opacity-100 text-gray-700"
             >
               {transcript[transcript.length - 1].text}
             </p> */}
-             {transcript.map((msg, i) => (
-                  <div
+              <div className="space-y-4 max-h-96 overflow-y-auto">
+                {transcript.map((msg, i) => (
+                  <motion.div
                     key={i}
-                    className={`mb-2 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}
+                    initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <span className={`inline-block px-3 py-2 rounded-xl text-sm max-w-[80%] text-white ${
-                      msg.role === 'user' ? 'bg-teal-600' : 'bg-gray-800'
-                    }`}>
-                      {msg.text}
-                    </span>
-                  </div> 
+                    <div className={`max-w-[80%] ${msg.role === 'user' ? 'order-2' : 'order-1'}`}>
+                      <div className={`inline-block px-4 py-3 rounded-2xl shadow-lg ${
+                        msg.role === 'user' 
+                          ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white' 
+                          : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                      }`}>
+                        <p className="text-sm leading-relaxed">{msg.text}</p>
+                      </div>
+                      <div className={`text-xs text-gray-500 dark:text-gray-400 mt-1 ${
+                        msg.role === 'user' ? 'text-right' : 'text-left'
+                      }`}>
+                        {msg.role === 'user' ? 'You' : 'AI Recruiter'}
+                      </div>
+                    </div>
+                  </motion.div>
                 ))}
                 {currentMessage && (
-                  <div
-                    className={`mb-2 ${currentMessage.role === 'user' ? 'text-right' : 'text-left'}`}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`flex ${currentMessage.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <span className={`inline-block px-3 py-2 rounded-xl text-sm max-w-[80%] text-white ${
-                      currentMessage.role === 'user' ? 'bg-teal-600' : 'bg-gray-800'
-                    }`}>
-                      {currentMessage.text}
-                    </span>
+                    <div className={`max-w-[80%] ${currentMessage.role === 'user' ? 'order-2' : 'order-1'}`}>
+                      <div className={`inline-block px-4 py-3 rounded-2xl shadow-lg opacity-70 ${
+                        currentMessage.role === 'user' 
+                          ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white' 
+                          : 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                      }`}>
+                        <p className="text-sm leading-relaxed">{currentMessage.text}</p>
+                      </div>
+                      <div className={`text-xs text-gray-400 mt-1 ${
+                        currentMessage.role === 'user' ? 'text-right' : 'text-left'
+                      }`}>
+                        {currentMessage.role === 'user' ? 'You (typing...)' : 'AI Recruiter (typing...)'}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+      )}
+
+        {/* Enhanced Live QA Pairs Viewer */}
+        {(pendingQuestion || qaPairs.length > 0 || userAnswerBufferRef.current || assistantQuestionBufferRef.current || isWaitingForCompleteQuestion) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-4xl mb-8 px-6"
+          >
+            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Zap className="w-6 h-6 text-purple-600" />
+                <h4 className="text-xl font-bold text-gray-800 dark:text-white">Live Q&A Analysis</h4>
+              </div>
+              <div className="space-y-4">
+                {pendingQuestion && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-200 dark:border-blue-800"
+                  >
+                    <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Current Question:</p>
+                    <p className="text-gray-700 dark:text-gray-300">{pendingQuestion}</p>
+                  </motion.div>
+                )}
+                
+                {isWaitingForCompleteQuestion && !pendingQuestion && (
+                  <motion.div
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-2xl border border-yellow-200 dark:border-yellow-800"
+                  >
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">⏳ Processing question...</p>
+                  </motion.div>
+                )}
+                
+                {assistantQuestionBufferRef.current && !pendingQuestion && !isWaitingForCompleteQuestion && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-2xl border border-orange-200 dark:border-orange-800"
+                  >
+                    <p className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-1">Building Question:</p>
+                    <p className="text-gray-700 dark:text-gray-300">{assistantQuestionBufferRef.current}</p>
+                  </motion.div>
+                )}
+                
+                {userAnswerBufferRef.current && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="p-4 bg-green-50 dark:bg-green-900/20 rounded-2xl border border-green-200 dark:border-green-800"
+                  >
+                    <p className="text-sm font-medium text-green-800 dark:text-green-300 mb-1">Your Response:</p>
+                    <p className="text-gray-700 dark:text-gray-300">{userAnswerBufferRef.current}</p>
+                  </motion.div>
+                )}
+                
+                {qaPairs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Brain className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400">No Q&A pairs recorded yet. Start the conversation!</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <h5 className="font-semibold text-gray-800 dark:text-white">Recorded Q&A Pairs ({qaPairs.length})</h5>
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {qaPairs.map((qa, idx) => (
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.1 }}
+                          className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-200 dark:border-gray-700"
+                        >
+                          <div className="mb-2">
+                            <span className="inline-block px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 text-xs font-medium rounded-full mb-1">
+                              Q{idx + 1}
+                            </span>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{qa.question}</p>
+                          </div>
+                          <div>
+                            <span className="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs font-medium rounded-full mb-1">
+                              A{idx + 1}
+                            </span>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">{qa.answer}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
                   </div>
                 )}
-          </div>
-        </div>
+              </div>
+            </div>
+          </motion.div>
       )}
 
-      {/* Live QA Pairs Viewer */}
-      {(pendingQuestion || qaPairs.length > 0 || userAnswerBufferRef.current || assistantQuestionBufferRef.current || isWaitingForCompleteQuestion) && (
-        <div className="w-full max-w-3xl mb-6">
-          <div className="bg-white rounded-2xl shadow-md p-6">
-            <h4 className="font-semibold text-lg mb-2">QA Pairs (Live)</h4>
-            {pendingQuestion && (
-              <p className="text-sm text-gray-600 mb-2">
-                Pending question: <span className="text-gray-900">{pendingQuestion}</span>
-              </p>
-            )}
-            {isWaitingForCompleteQuestion && !pendingQuestion && (
-              <p className="text-sm text-yellow-600 mb-2">
-                Waiting for complete question...
-              </p>
-            )}
-            {assistantQuestionBufferRef.current && !pendingQuestion && !isWaitingForCompleteQuestion && (
-              <p className="text-sm text-orange-600 mb-2">
-                Building question: <span className="text-gray-900">{assistantQuestionBufferRef.current}</span>
-              </p>
-            )}
-            {userAnswerBufferRef.current && (
-              <p className="text-sm text-blue-600 mb-2">
-                User answer buffer: <span className="text-gray-900">{userAnswerBufferRef.current}</span>
-              </p>
-            )}
-            {qaPairs.length === 0 ? (
-              <p className="text-sm text-gray-600">No pairs recorded yet.</p>
-            ) : (
-              <ul className="list-disc pl-5 space-y-1">
-                {qaPairs.map((qa, idx) => (
-                  <li key={idx} className="text-sm">
-                    <span className="font-medium">Q{idx + 1}:</span> {qa.question}
-                    <br />
-                    <span className="font-medium">A{idx + 1}:</span> {qa.answer}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
-
-       {/* Control Bar */}
-       <div className="flex items-center gap-6 mb-6">
-         <button 
-           onClick={toggleMic}
-           disabled={!isConnected}
-           className={`flex items-center justify-center w-12 h-12 rounded-full transition ${
-             isMicOn 
-               ? 'bg-green-500 hover:bg-green-600' 
-               : 'bg-red-500 hover:bg-red-600'
-           } ${!isConnected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-         >
-           <Mic className="text-white" size={22} />
-         </button>
-        {callStatus !== "ACTIVE" ? (
-          <button 
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-green-500 hover:bg-green-600 transition relative" 
-            onClick={startCall}
+        {/* Enhanced Control Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6, duration: 0.8 }}
+          className="flex items-center justify-center gap-8 mb-8"
+        >
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={toggleMic}
+            disabled={!isConnected}
+            className={`relative flex items-center justify-center w-16 h-16 rounded-full shadow-xl transition-all duration-300 ${
+              isMicOn 
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700' 
+                : 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700'
+            } ${!isConnected ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >
-            <span
-              className={cn(
-                "absolute animate-ping rounded-full opacity-75",
-                callStatus !== "CONNECTING" && "hidden"
+            {isMicOn && isConnected && (
+              <motion.div
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute inset-0 rounded-full bg-green-400 opacity-30"
+              />
+            )}
+            <Mic className="text-white relative z-10" size={24} />
+          </motion.button>
+
+          {callStatus !== "ACTIVE" ? (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-2xl transition-all duration-300"
+              onClick={startCall}
+            >
+              {callStatus === "CONNECTING" && (
+                <motion.div
+                  animate={{ scale: [1, 1.3, 1] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="absolute inset-0 rounded-full bg-blue-400 opacity-40"
+                />
               )}
+              <Phone className="text-white relative z-10" size={28} />
+              <span className="absolute -bottom-8 text-sm font-medium text-gray-600 dark:text-gray-300">
+                {callStatus === "CONNECTING" ? "Connecting..." : "Start Call"}
+              </span>
+            </motion.button>
+          ) : (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-2xl transition-all duration-300"
+              onClick={() => endCall()}
+            >
+              <Phone className="text-white relative z-10" size={28} />
+              <span className="absolute -bottom-8 text-sm font-medium text-gray-600 dark:text-gray-300">
+                End Call
+              </span>
+            </motion.button>
+          )}
+        </motion.div>
+
+        {/* Enhanced Status Display */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="text-center mb-6"
+        >
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <motion.div
+              animate={{ 
+                scale: callStatus === "ACTIVE" ? [1, 1.2, 1] : 1,
+                rotate: callStatus === "CONNECTING" ? 360 : 0
+              }}
+              transition={{ 
+                scale: { duration: 2, repeat: Infinity },
+                rotate: { duration: 2, repeat: Infinity, ease: "linear" }
+              }}
+              className={`w-3 h-3 rounded-full ${
+                callStatus === "ACTIVE" ? 'bg-green-500' :
+                callStatus === "CONNECTING" ? 'bg-yellow-500' :
+                'bg-gray-400'
+              }`}
             />
-            <Phone className="text-white" size={22} />
-          </button>
-        ) : (
-          <button 
-            className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 transition"
-            onClick={() => endCall()}
-          >
-            <Phone className="text-white" size={22} />
-          </button>
-        )}
-      </div>
+            <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
+              {callStatus === "INACTIVE" || callStatus === "FINISHED" 
+                ? "Ready to start interview" 
+                : callStatus === "CONNECTING" 
+                ? "Connecting to AI Recruiter..." 
+                : "Interview in Progress"}
+            </p>
+          </div>
+          {callStatus === "ACTIVE" && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm text-gray-500 dark:text-gray-400"
+            >
+              Speak naturally - the AI is listening and will respond
+            </motion.p>
+          )}
+        </motion.div>
 
-      {/* Status Text */}
-      <p className="text-gray-500 text-center mb-3">
-        {callStatus === "INACTIVE" || callStatus === "FINISHED" 
-          ? "Ready to start interview" 
-          : callStatus === "CONNECTING" 
-          ? "Connecting..." 
-          : "Interview in Progress..."}
-      </p>
-
-      {/* Database Save Status */}
-      <div className="text-center mb-3">
-        {!sessionId && (
-          <p className="text-yellow-600 text-sm">
-            ⚠️ No session ID - Interview data will not be saved to database
-          </p>
-        )}
-        {sessionId && (
-          <p className="text-gray-500 text-xs">
-            📋 Session ID: {sessionId}
-          </p>
-        )}
-        {sessionId && databaseSaveStatus === 'saving' && (
-          <p className="text-blue-600 text-sm">
-            💾 Saving interview data to database...
-          </p>
-        )}
-        {sessionId && databaseSaveStatus === 'success' && (
-          <p className="text-green-600 text-sm">
-            ✅ Interview data saved successfully! ({qaPairs.length} QA pairs) - Redirecting to feedback page...
-          </p>
-        )}
-        {sessionId && databaseSaveStatus === 'error' && (
-          <p className="text-red-600 text-sm">
-            ❌ Failed to save interview data
-          </p>
-        )}
-      </div>
+        {/* Enhanced Database Save Status */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="text-center mb-8"
+        >
+          {!sessionId && (
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-full"
+            >
+              <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+              <p className="text-yellow-700 dark:text-yellow-300 text-sm font-medium">
+                No session ID - Data will not be saved
+              </p>
+            </motion.div>
+          )}
+          
+          {sessionId && (
+            <div className="space-y-3">
+              <motion.div
+                initial={{ scale: 0.95 }}
+                animate={{ scale: 1 }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full"
+              >
+                <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                <p className="text-blue-700 dark:text-blue-300 text-sm font-medium">
+                  Session ID: {sessionId}
+                </p>
+              </motion.div>
+              
+              {databaseSaveStatus === 'saving' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"
+                  />
+                  <p className="text-blue-700 dark:text-blue-300 text-sm font-medium">
+                    Saving interview data...
+                  </p>
+                </motion.div>
+              )}
+              
+              {databaseSaveStatus === 'success' && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-full"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center"
+                  >
+                    <div className="w-2 h-2 bg-white rounded-full" />
+                  </motion.div>
+                  <p className="text-green-700 dark:text-green-300 text-sm font-medium">
+                    Data saved! ({qaPairs.length} QA pairs) - Redirecting...
+                  </p>
+                </motion.div>
+              )}
+              
+              {databaseSaveStatus === 'error' && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-full"
+                >
+                  <div className="w-2 h-2 bg-red-500 rounded-full" />
+                  <p className="text-red-700 dark:text-red-300 text-sm font-medium">
+                    Failed to save interview data
+                  </p>
+                </motion.div>
+              )}
+            </div>
+          )}
+        </motion.div>
 
       {/* Answers JSON Confirmation */}
       {showJson && qaPairs.length > 0 && (
@@ -836,6 +1132,7 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

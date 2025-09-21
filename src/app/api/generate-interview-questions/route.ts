@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { InterviewService } from '@/lib/interviewService'
 import { InterviewMetadata } from '@/types/interview'
-import { dummyInterviewData, dummyInterviewMetadata } from '@/types/questions'
+import { dummyInterviewData } from '@/types/questions'
 
 interface InterviewQuestionsRequest {
   job_posting_url: string
@@ -26,9 +26,9 @@ export async function POST(request: Request) {
       try {
         // Create metadata from dummy data
         const metadata: InterviewMetadata = {
-          expected_keywords: dummyInterviewMetadata.expected_keywords,
-          difficulty: dummyInterviewMetadata.difficulty as 'easy' | 'medium' | 'hard',
-          topic: dummyInterviewMetadata.topic
+          expected_keywords: dummyInterviewData.expected_keywords,
+          difficulty: dummyInterviewData.difficulty as 'easy' | 'medium' | 'hard',
+          topic: dummyInterviewData.topic
         };
 
         // Store only the metadata in MongoDB
@@ -42,7 +42,11 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: true,
           data: dummyInterviewData,
-          metadata: dummyInterviewMetadata,
+          metadata: {
+            expected_keywords: dummyInterviewData.expected_keywords,
+            difficulty: dummyInterviewData.difficulty,
+            topic: dummyInterviewData.topic
+          },
           sessionId: sessionId,
           message: 'Using dummy data for testing'
         });
@@ -52,7 +56,11 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: true,
           data: dummyInterviewData,
-          metadata: dummyInterviewMetadata,
+          metadata: {
+            expected_keywords: dummyInterviewData.expected_keywords,
+            difficulty: dummyInterviewData.difficulty,
+            topic: dummyInterviewData.topic
+          },
           warning: 'Dummy data generated but failed to save to database'
         });
       }

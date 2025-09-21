@@ -34,9 +34,11 @@ export default function MockInterviewPage() {
 
   // Format questions for display and assistant
   const allQuestions: string[] = []
-  Object.values(questions).forEach(category => {
-    allQuestions.push(...category)
-  })
+  if (questions.items) {
+    Object.values(questions.items).forEach(category => {
+      allQuestions.push(...category)
+    })
+  }
 
   // Format questions for the assistant
   const formattedQuestions = allQuestions.map((q, index) => `${index + 1}. ${q}`).join('\n')

@@ -41,12 +41,22 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --animate-aurora: aurora 60s linear infinite;
+  --animation-aurora: aurora 60s linear infinite;
 }
 
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.141 0.005 285.823);
+  --white: #ffffff;
+  --black: #000000;
+  --transparent: transparent;
+  --blue-500: #3b82f6;
+  --indigo-300: #a5b4fc;
+  --blue-300: #93c5fd;
+  --violet-200: #ddd6fe;
+  --blue-400: #60a5fa;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
@@ -110,6 +120,33 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.552 0.016 285.938);
+}
+
+@keyframes aurora {
+  0% {
+    background-position: 0% 50%, 0% 50%;
+    opacity: 0.3;
+  }
+  25% {
+    background-position: 100% 25%, 50% 25%;
+    opacity: 0.5;
+  }
+  50% {
+    background-position: 200% 50%, 100% 50%;
+    opacity: 0.4;
+  }
+  75% {
+    background-position: 300% 75%, 150% 75%;
+    opacity: 0.6;
+  }
+  100% {
+    background-position: 400% 50%, 200% 50%;
+    opacity: 0.3;
+  }
+}
+
+.animate-aurora {
+  animation: aurora 20s ease-in-out infinite;
 }
 
 @layer base {
