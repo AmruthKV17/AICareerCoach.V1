@@ -85,71 +85,71 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 			opacity: 1.0,
 			sizeAttenuation: true,
 		});
-
 		// Create points object
 		const points = new THREE.Points(geometry, material);
 		scene.add(points);
 
 		let count = 0;
-		let animationId: number;
 
-		// Animation function
-		const animate = () => {
-			animationId = requestAnimationFrame(animate);
+	// Animation function
+	const animate = () => {
+		if (sceneRef.current) {
+			sceneRef.current.animationId = requestAnimationFrame(animate);
+		}
 
-			const positionAttribute = geometry.attributes.position;
-			const positions = positionAttribute.array as Float32Array;
+		const positionAttribute = geometry.attributes.position;
+		const positions = positionAttribute.array as Float32Array;
 
-			let i = 0;
-			for (let ix = 0; ix < AMOUNTX; ix++) {
-				for (let iy = 0; iy < AMOUNTY; iy++) {
-					const index = i * 3;
+		let i = 0;
+		for (let ix = 0; ix < AMOUNTX; ix++) {
+			for (let iy = 0; iy < AMOUNTY; iy++) {
+				const index = i * 3;
 
-					// Animate Y position with sine waves
-					positions[index + 1] =
-						Math.sin((ix + count) * 0.3) * 50 +
-						Math.sin((iy + count) * 0.5) * 50;
+				// Animate Y position with sine waves
+				positions[index + 1] =
+					Math.sin((ix + count) * 0.3) * 50 +
+					Math.sin((iy + count) * 0.5) * 50;
 
-					i++;
-				}
+				i++;
 			}
+		}
 
-			positionAttribute.needsUpdate = true;
+		positionAttribute.needsUpdate = true;
 
-			// Update point sizes based on wave
-			const customMaterial = material as THREE.PointsMaterial & {
-				uniforms?: any;
-			};
-			if (!customMaterial.uniforms) {
-				// For dynamic size changes, we'd need a custom shader
-				// For now, keeping constant size for performance
-			}
-
-			renderer.render(scene, camera);
-			count += 0.1;
+		// Update point sizes based on wave
+		const customMaterial = material as THREE.PointsMaterial & {
+			uniforms?: any;
 		};
+		if (!customMaterial.uniforms) {
+			// For dynamic size changes, we'd need a custom shader
+			// For now, keeping constant size for performance
+		}
 
-		// Handle window resize
-		const handleResize = () => {
-			camera.aspect = window.innerWidth / window.innerHeight;
-			camera.updateProjectionMatrix();
-			renderer.setSize(window.innerWidth, window.innerHeight);
-		};
+		renderer.render(scene, camera);
+		count += 0.1;
+	};
 
-		window.addEventListener('resize', handleResize);
+	// Handle window resize
+	const handleResize = () => {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize(window.innerWidth, window.innerHeight);
+	};
 
-		// Start animation
-		animate();
+	window.addEventListener('resize', handleResize);
 
-		// Store references
-		sceneRef.current = {
-			scene,
-			camera,
-			renderer,
-			particles: [points],
-			animationId,
-			count,
-		};
+	// Store references (before starting animation)
+	sceneRef.current = {
+		scene,
+		camera,
+		renderer,
+		particles: [points],
+		animationId: 0, // Will be set by animate()
+		count,
+	};
+
+	// Start animation
+	animate();
 
 		// Cleanup function
 		return () => {

@@ -6,13 +6,14 @@ import { dummyInterviewData } from '@/types/questions'
 interface InterviewQuestionsRequest {
   job_posting_url: string
   use_dummy_data?: boolean
+  session_id?: string
 }
 
 
 export async function POST(request: Request) {
   try {
     const body: InterviewQuestionsRequest = await request.json()
-    const { job_posting_url, use_dummy_data = false } = body
+    const { job_posting_url, use_dummy_data = false, session_id } = body
 
     if (!job_posting_url) {
       return NextResponse.json(
@@ -31,13 +32,39 @@ export async function POST(request: Request) {
           topic: dummyInterviewData.topic
         };
 
-        // Store only the metadata in MongoDB
-        const sessionId = await InterviewService.createInterviewSession(
-          job_posting_url,
-          metadata
-        );
+        let finalSessionId: string;
 
-        console.log('Dummy interview session stored with ID:', sessionId);
+        // Use existing session if provided, otherwise create new one
+        if (session_id) {
+          finalSessionId = session_id;
+          console.log('Using existing session:', finalSessionId);
+          // Update existing session with complete data
+          const updated = await InterviewService.updateSessionWithQuestions(
+            finalSessionId,
+            job_posting_url,
+            metadata,
+            dummyInterviewData
+          );
+          if (!updated) {
+            console.error('Failed to update session with questions');
+            throw new Error('Failed to save questions to database');
+          }
+        } else {
+          // Create new session with metadata
+          finalSessionId = await InterviewService.createInterviewSession(
+            job_posting_url,
+            metadata
+          );
+          console.log('Created new session:', finalSessionId);
+          // Save the questions to the new session
+          const saved = await InterviewService.saveQuestions(finalSessionId, dummyInterviewData);
+          if (!saved) {
+            console.error('Failed to save questions to new session');
+            throw new Error('Failed to save questions to database');
+          }
+        }
+
+        console.log('✅ Dummy interview questions successfully saved to session:', finalSessionId);
 
         return NextResponse.json({
           success: true,
@@ -47,7 +74,7 @@ export async function POST(request: Request) {
             difficulty: dummyInterviewData.difficulty,
             topic: dummyInterviewData.topic
           },
-          sessionId: sessionId,
+          sessionId: finalSessionId,
           message: 'Using dummy data for testing'
         });
       } catch (dbError) {
@@ -146,7 +173,7 @@ export async function POST(request: Request) {
             throw new Error('Failed to parse interview questions');
           }
 
-          // Store only metadata in MongoDB
+          // Store metadata and questions in MongoDB
           try {
             // Extract metadata from the questions response
             const metadata: InterviewMetadata = {
@@ -155,17 +182,44 @@ export async function POST(request: Request) {
               topic: questions.topic || 'Interview'
             };
 
-            const sessionId = await InterviewService.createInterviewSession(
-              job_posting_url,
-              metadata
-            );
+            let finalSessionId: string;
+
+            // Use existing session if provided, otherwise create new one
+            if (session_id) {
+              finalSessionId = session_id;
+              console.log('Using existing session:', finalSessionId);
+              // Update existing session with complete data
+              const updated = await InterviewService.updateSessionWithQuestions(
+                finalSessionId,
+                job_posting_url,
+                metadata,
+                questions
+              );
+              if (!updated) {
+                console.error('Failed to update session with questions');
+                throw new Error('Failed to save questions to database');
+              }
+            } else {
+              // Create new session with metadata
+              finalSessionId = await InterviewService.createInterviewSession(
+                job_posting_url,
+                metadata
+              );
+              console.log('Created new session:', finalSessionId);
+              // Save the questions to the new session
+              const saved = await InterviewService.saveQuestions(finalSessionId, questions);
+              if (!saved) {
+                console.error('Failed to save questions to new session');
+                throw new Error('Failed to save questions to database');
+              }
+            }
             
-            console.log('Interview session stored with ID:', sessionId);
+            console.log('✅ Interview questions successfully saved to session:', finalSessionId);
 
             return NextResponse.json({
               success: true,
               data: questions,
-              sessionId: sessionId
+              sessionId: finalSessionId
             });
           } catch (dbError) {
             console.error('Database error:', dbError);

@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { InterviewQuestions } from './questions'
 
 export interface InterviewQuestion {
   id: string
@@ -19,6 +20,7 @@ export interface InterviewSession {
   _id?: ObjectId
   jobPostingUrl: string
   metadata: InterviewMetadata
+  questions?: InterviewQuestions
   qaPairs?: Array<{ question: string, answer: string }>
   createdAt: Date
   updatedAt: Date

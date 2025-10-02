@@ -7,20 +7,64 @@ import { useInterviewQuestions } from '@/context/InterviewQuestionsContext'
 import { SessionUtils } from '@/lib/sessionUtils'
 
 export default function MockInterviewPage() {
-  const { questions } = useInterviewQuestions()
+  const { questions, setQuestions } = useInterviewQuestions()
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(true)
 
-  // Get sessionId from localStorage or URL
+  // Get sessionId and fetch questions from session
   useEffect(() => {
-    const sessionInfo = SessionUtils.getSessionInfo()
-    if (sessionInfo.sessionId) {
-      setSessionId(sessionInfo.sessionId)
-      console.log('📋 Session ID found:', sessionInfo.sessionId, 'from', sessionInfo.source)
-    } else {
-      console.warn('⚠️ No session ID found. QA pairs will not be saved to database.')
+    const fetchSessionQuestions = async () => {
+      const sessionInfo = SessionUtils.getSessionInfo()
+      if (sessionInfo.sessionId) {
+        setSessionId(sessionInfo.sessionId)
+        console.log('📋 Session ID found:', sessionInfo.sessionId, 'from', sessionInfo.source)
+        
+        // If questions are not already in context, fetch from session
+        if (!questions) {
+          try {
+            console.log('🔍 Fetching questions from session...')
+            const response = await fetch(`/api/interview-sessions/${sessionInfo.sessionId}/questions`);
+            const data = await response.json();
+            console.log(data);
+            
+            if (data.success) {
+              if (data.data.items) {
+                console.log('✅ Questions loaded from session:', data.data.items)
+                setQuestions(data.data.items)
+              } else {
+                console.log('ℹ️ No questions found in session')
+              }
+            } else {
+              console.warn('⚠️ Failed to fetch questions from session:', response.status)
+            }
+          } catch (error) {
+            console.error('❌ Error fetching session questions:', error)
+          }
+        } else {
+          console.log('✅ Questions already available in context')
+        }
+      } else {
+        console.warn('⚠️ No session ID found. QA pairs will not be saved to database.')
+      }
+      setIsLoadingQuestions(false)
     }
-  }, [])
 
+    fetchSessionQuestions()
+  }, [questions, setQuestions])
+
+  // Show loading state while fetching questions
+  if (isLoadingQuestions) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading interview session</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if no questions available after loading
   if (!questions) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -46,47 +90,42 @@ export default function MockInterviewPage() {
   // Assistant configuration
   const assistantOptions = {
     name: "AI Recruiter",
-    firstMessage: "Hi there! Welcome to your React Developer interview. Let's get started with a few questions!",
+    firstMessage: "Hi there! Welcome to interview. Let's get started with a few questions!",
     transcriber: {
-      provider: "deepgram" as const,
+      provider: "deepgram",
       model: "nova-2",
-      language: "en-US" as const,
+      language: "en",
     },
     voice: {
-      provider: "playht" as const,
-      voiceId: "jennifer",
+      provider: "vapi",
+      voiceId: "Neha",
     },
     model: {
-      provider: "openai" as const,
-      model: "gpt-4" as const,
+      provider: "openai",
+      model: "gpt-3.5-turbo",
       messages: [
         {
-          role: "system" as const,
-          content: `
-You are an AI voice assistant conducting interviews.
-Your job is to ask candidates provided interview questions, assess their responses.
-Begin the conversation with a friendly introduction, setting a relaxed yet professional tone.
-Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. 
+          role: "system",
+          content: `You are an AI voice assistant conducting interviews. Your job is to ask candidates provided interview questions and assess their responses. Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise.
 
 Below are the Questions to ask:
 ${formattedQuestions}
 
-If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example:
-"Need a hint? Think about how React tracks component updates!"
-Provide brief, encouraging feedback after each answer. Example:
-"Nice! That's a solid answer."
-"Hmm, not quite! Want to try again?"
-Keep the conversational natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!"
-After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example:
-"That was great! You handled some tough questions well. Keep sharpening your skills!"
-End on a positive note: 
-"Thanks for chatting! Hope to see you crushing projects soon!"
+If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example: "Need a hint? Think about how React tracks component updates!"
+
+Provide brief, encouraging feedback after each answer. Example: "Nice! That's a solid answer." or "Hmm, not quite! Want to try again?"
+
+Keep the conversation natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!"
+
+After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example: "That was great! You handled some tough questions well. Keep sharpening your skills!"
+
+End on a positive note: "Thanks for chatting! Hope to see you crushing projects soon!"
+
 Key Guidelines:
-✅ Be friendly, engaging, and witty 🎤
-✅ Keep responses short and natural, like a real conversation
-✅ Adapt based on the candidate's confidence level
-✅ Ensure the interview remains focused on React
-`.trim(),
+- Be friendly, engaging, and witty
+- Keep responses short and natural, like a real conversation
+- Adapt based on the candidate's confidence level
+- Ensure the interview remains focused on React`,
         },
       ],
     },

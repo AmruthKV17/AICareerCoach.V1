@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useInterviewQuestions } from '@/context/InterviewQuestionsContext'
@@ -8,22 +8,31 @@ import { SessionUtils } from '@/lib/sessionUtils'
 import { AnimatedGridPattern } from '@/components/ui/animated-grid-pattern'
 import { cn } from '@/lib/utils'
 
-interface InterviewQuestionsProps {}
+interface InterviewQuestionsProps {
+  initialSessionId?: string
+}
 
 // Animated Background Component (Original Flowing Lines)
 function FloatingPaths({ position }: { position: number }) {
-    const paths = Array.from({ length: 36 }, (_, i) => ({
-        id: i,
-        d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
-            380 - i * 5 * position
-        } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
-            152 - i * 5 * position
-        } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
-            684 - i * 5 * position
-        } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
-        color: `rgba(15,23,42,${0.2 + i * 0.05})`,
-        width: 0.8 + i * 0.05,
-    }));
+    const paths = Array.from({ length: 36 }, (_, i) => {
+        const xOffset = -380 + i * 5 * position;
+        const yOffset = -i * 6;
+        const xEnd = -312 + i * 5 * position;
+        const yEnd = -i * 6 + 189;
+        const xEnd2 = 152 - i * 5 * position;
+        const yEnd2 = -i * 6 + 216;
+        const xEnd3 = 616 - i * 5 * position;
+        const yEnd3 = -i * 6 + 343;
+        const xEnd4 = 684 - i * 5 * position;
+        const yEnd4 = -i * 6 + 470;
+
+        return {
+            id: i,
+            d: `M${xOffset} ${yOffset}C${xOffset} ${yOffset} ${xEnd} ${yEnd} ${xEnd2} ${yEnd2}C${xEnd3} ${yEnd3} ${xEnd4} ${yEnd4} ${xEnd4} ${yEnd4}`,
+            color: `rgba(22, 36, 102, ${0.2 + i * 0.05})`,
+            width: 0.8 + i * 0.05,
+        };
+    });
 
     return (
         <div className="absolute inset-0 pointer-events-none">
@@ -58,14 +67,48 @@ function FloatingPaths({ position }: { position: number }) {
     );
 }
 
-export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps) {
+export default function InterviewQuestionsGenerator({ initialSessionId }: InterviewQuestionsProps) {
   const router = useRouter()
   const [jobUrl, setJobUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [useDummyData, setUseDummyData] = useState(true)
-  const [sessionId, setSessionId] = useState<string | null>(null)
+  const [sessionId, setSessionId] = useState<string | null>(initialSessionId || null)
+  const [checkingSession, setCheckingSession] = useState(!!initialSessionId)
   const { questions, setQuestions } = useInterviewQuestions()
+
+  // Check if session already has questions on mount
+  useEffect(() => {
+    const checkExistingQuestions = async () => {
+      if (!initialSessionId) {
+        setCheckingSession(false)
+        return
+      }
+
+      try {
+        setCheckingSession(true)
+        const response = await fetch(`/api/interview-sessions/${initialSessionId}/questions`)
+        const data = await response.json()
+
+        if (data.success && data.data) {
+          // Session has questions, display them
+          setQuestions(data.data)
+          setSessionId(initialSessionId)
+          SessionUtils.setSessionId(initialSessionId)
+          console.log('Loaded existing questions for session:', initialSessionId)
+        } else {
+          // Session exists but no questions yet
+          console.log('Session exists but no questions found')
+        }
+      } catch (err) {
+        console.error('Error checking existing questions:', err)
+      } finally {
+        setCheckingSession(false)
+      }
+    }
+
+    checkExistingQuestions()
+  }, [initialSessionId, setQuestions])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,7 +125,8 @@ export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps)
         },
         body: JSON.stringify({
           job_posting_url: jobUrl.trim(),
-          use_dummy_data: useDummyData
+          use_dummy_data: useDummyData,
+          session_id: sessionId
         })
       })
 
@@ -108,6 +152,18 @@ export default function InterviewQuestionsGenerator({}: InterviewQuestionsProps)
 
   const handleStartMockInterview = () => {
     router.push('/mock-interview')
+  }
+
+  // Show loading state while checking for existing questions
+  if (checkingSession) {
+    return (
+      <div className="relative min-h-screen w-full bg-white dark:bg-neutral-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading session...</p>
+        </div>
+      </div>
+    )
   }
 
   return (

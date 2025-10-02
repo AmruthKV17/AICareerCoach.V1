@@ -1,5 +1,6 @@
 import { getDatabase } from './mongodb'
 import { InterviewSession, InterviewQuestion, InterviewMetadata } from '@/types/interview'
+import { InterviewQuestions } from '@/types/questions'
 import { ObjectId } from 'mongodb'
 
 export class InterviewService {
@@ -136,6 +137,70 @@ export class InterviewService {
       return session?.metadata || null
     } catch (error) {
       console.error('Error fetching interview metadata:', error)
+      return null
+    }
+  }
+
+  static async saveQuestions(sessionId: string, questions: InterviewQuestions): Promise<boolean> {
+    const collection = await this.getCollection()
+    
+    try {
+      const result = await collection.updateOne(
+        { _id: new ObjectId(sessionId) },
+        { 
+          $set: { 
+            questions: questions,
+            updatedAt: new Date()
+          }
+        }
+      )
+      return result.modifiedCount > 0 || result.matchedCount > 0
+    } catch (error) {
+      console.error('Error saving questions:', error)
+      return false
+    }
+  }
+
+  static async updateSessionWithQuestions(
+    sessionId: string, 
+    jobPostingUrl: string,
+    metadata: InterviewMetadata,
+    questions: InterviewQuestions
+  ): Promise<boolean> {
+    const collection = await this.getCollection()
+    
+    try {
+      const result = await collection.updateOne(
+        { _id: new ObjectId(sessionId) },
+        { 
+          $set: { 
+            jobPostingUrl: jobPostingUrl,
+            metadata: metadata,
+            questions: questions,
+            updatedAt: new Date()
+          }
+        }
+      )
+      return result.modifiedCount > 0 || result.matchedCount > 0
+    } catch (error) {
+      console.error('Error updating session with questions:', error)
+      return false
+    }
+  }
+
+  static async getQuestions(sessionId: string): Promise<InterviewQuestions | null> {
+    console.log(sessionId);
+    
+    const collection = await this.getCollection()
+    
+    try {
+      const session = await collection.findOne(
+        { _id: new ObjectId(sessionId) },
+        { projection: { questions: 1 } }
+      )
+      return session?.questions || null
+    } catch (error) {
+      console.error('Error fetching questions:', error)
       return null
     }
   }

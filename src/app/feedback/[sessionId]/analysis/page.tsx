@@ -569,10 +569,12 @@ export default function AnalysisPage() {
                     <h3 className="text-xl font-bold text-gray-800">Comprehensive Strengths</h3>
                   </div>
                   <div className="space-y-3">
-                    {(getAnalysisData().holistic_assessment?.comprehensive_strengths || ['Good technical understanding', 'Clear communication']).map((strength: string, idx: number) => (
+                    {(getAnalysisData().holistic_assessment?.comprehensive_strengths || ['Good technical understanding', 'Clear communication']).map((strength: any, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                         <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{strength}</span>
+                        <span className="text-gray-700">
+                          {typeof strength === 'object' ? (strength?.description || strength?.strength || JSON.stringify(strength)) : strength}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -590,10 +592,12 @@ export default function AnalysisPage() {
                     <h3 className="text-xl font-bold text-gray-800">Improvement Areas</h3>
                   </div>
                   <div className="space-y-3">
-                    {(getAnalysisData().holistic_assessment?.improvement_areas || ['Technical depth', 'Practical examples']).map((area: string, idx: number) => (
+                    {(getAnalysisData().holistic_assessment?.improvement_areas || ['Technical depth', 'Practical examples']).map((area: any, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors">
                         <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{area}</span>
+                        <span className="text-gray-700">
+                          {typeof area === 'object' ? (area?.description || area?.area || JSON.stringify(area)) : area}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -740,7 +744,12 @@ export default function AnalysisPage() {
                                   </div>
                                   <div className="flex-1">
                                     <h4 className="font-bold text-xl text-gray-800 mb-2">{item.topic || item.area}</h4>
-                                    <p className="text-gray-600 leading-relaxed">{item.description || item.recommendation}</p>
+                                    <p className="text-gray-600 leading-relaxed">
+                                      {typeof (item.description || item.recommendation) === 'object' 
+                                        ? (item.description?.description || item.recommendation?.description || JSON.stringify(item.description || item.recommendation))
+                                        : (item.description || item.recommendation)
+                                      }
+                                    </p>
                                   </div>
                                 </div>
                                 {item.resources && (
@@ -829,7 +838,7 @@ export default function AnalysisPage() {
                                 {/* Topics Grid for this phase */}
                                 {phase.specific_topics && (
                                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {phase.specific_topics.map((topic: string, idx: number) => (
+                                    {phase.specific_topics.map((topic: any, idx: number) => (
                                       <div
                                         key={idx}
                                         className="group relative bg-white border border-blue-100 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
@@ -840,7 +849,9 @@ export default function AnalysisPage() {
                                           </div>
                                         </div>
                                         <GitBranch className="w-8 h-8 text-blue-500 mb-3" />
-                                        <h4 className="font-semibold text-gray-800 mb-2 pr-8">{topic}</h4>
+                                        <h4 className="font-semibold text-gray-800 mb-2 pr-8">
+                                          {typeof topic === 'object' ? (topic?.topic || topic?.description || JSON.stringify(topic)) : topic}
+                                        </h4>
                                         <div className="mt-3 pt-3 border-t border-gray-100">
                                           <span className="text-xs text-gray-500">Phase {phaseIdx + 1} Topic</span>
                                         </div>
@@ -870,7 +881,7 @@ export default function AnalysisPage() {
 
                               {/* Topics Grid */}
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {(getAnalysisData().recommended_action_plan?.medium_term_development?.specific_topics || []).map((topic: string, idx: number) => (
+                                {(getAnalysisData().recommended_action_plan?.medium_term_development?.specific_topics || []).map((topic: any, idx: number) => (
                                   <div
                                     key={idx}
                                     className="group relative bg-white border border-blue-100 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
@@ -881,7 +892,9 @@ export default function AnalysisPage() {
                                       </div>
                                     </div>
                                     <GitBranch className="w-8 h-8 text-blue-500 mb-3" />
-                                    <h4 className="font-semibold text-gray-800 mb-2 pr-8">{topic}</h4>
+                                    <h4 className="font-semibold text-gray-800 mb-2 pr-8">
+                                      {typeof topic === 'object' ? (topic?.topic || topic?.description || JSON.stringify(topic)) : topic}
+                                    </h4>
                                     <div className="mt-3 pt-3 border-t border-gray-100">
                                       {/* <span className="text-xs text-gray-500">Click to explore resources →</span> */}
                                     </div>
@@ -942,7 +955,7 @@ export default function AnalysisPage() {
                           <div className="grid grid-cols-1 gap-4">
                             {(Array.isArray(getAnalysisData().recommended_action_plan?.strength_utilization) 
                               ? getAnalysisData().recommended_action_plan?.strength_utilization
-                              : []).map((recommendation: string, idx: number) => (
+                              : []).map((recommendation: any, idx: number) => (
                               <div
                                 key={idx}
                                 className="group relative overflow-hidden bg-white border border-green-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300"
@@ -953,7 +966,12 @@ export default function AnalysisPage() {
                                     <span className="text-green-600 font-bold">{idx + 1}</span>
                                   </div>
                                   <div className="flex-1">
-                                    <p className="text-gray-700 leading-relaxed">{recommendation}</p>
+                                    <p className="text-gray-700 leading-relaxed">
+                                      {typeof recommendation === 'object' 
+                                        ? (recommendation?.recommendation || recommendation?.strength || JSON.stringify(recommendation))
+                                        : recommendation
+                                      }
+                                    </p>
                                     <div className="mt-3 flex items-center gap-2">
                                       <CheckCircle className="w-4 h-4 text-green-500" />
                                       <span className="text-sm text-green-600 font-medium">Action Item</span>

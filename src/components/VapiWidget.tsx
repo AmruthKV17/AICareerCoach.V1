@@ -135,12 +135,24 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
   };
 
   useEffect(() => {
+    console.log('🔧 Initializing Vapi with API key:', process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY ? 'Present' : 'Missing');
+    
     if (!process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY) {
-      console.error('NEXT_PUBLIC_VAPI_PUBLIC_KEY is not defined')
+      console.error('❌ NEXT_PUBLIC_VAPI_PUBLIC_KEY is not defined')
+      alert('Vapi API key is missing. Please check your environment configuration.');
       return
     }
-    const vapiInstance = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
-    setVapi(vapiInstance);
+    
+    let vapiInstance: Vapi;
+    try {
+      vapiInstance = new Vapi(process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY);
+      setVapi(vapiInstance);
+      console.log('✅ Vapi instance created successfully');
+    } catch (error) {
+      console.error('❌ Error creating Vapi instance:', error);
+      alert('Failed to initialize Vapi. Please check your API key and try again.');
+      return;
+    }
 
     // Event listeners
     vapiInstance.on('call-start', () => {
@@ -277,7 +289,7 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
       }
     });
 
-    vapiInstance.on('message', (message) => {
+    vapiInstance.on('message', (message: any) => {
       if (message.type === 'transcript' && message.transcriptType === 'final') {
         const newText = message.transcript;
         const normalizedRole = (message.role || '').toLowerCase();
@@ -414,7 +426,7 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
       }
     });
 
-    vapiInstance.on('error', (error) => {
+    vapiInstance.on('error', (error: any) => {
       console.error('Vapi error:', error);
     });
 
@@ -430,16 +442,70 @@ const VapiWidget: React.FC<VapiWidgetProps> = ({
       }
       vapiInstance?.stop();
     };
-    startCall();
   }, [apiKey]);
 
   const startCall = async () => {
-    setCallStatus(CallStatus.CONNECTING);
-    if (vapi) {
+    try {
+      console.log('🚀 Starting Vapi call...');
+      setCallStatus(CallStatus.CONNECTING);
+      
+      if (!vapi) {
+        console.error('❌ Vapi instance not initialized');
+        alert('Vapi not initialized. Please refresh the page.');
+        return;
+      }
+
+      // Validate assistant configuration
       if (assistantOptions) {
+        console.log('📋 Using assistant options:', assistantOptions);
+        
+        // Validate required fields
+        if (!assistantOptions.model || !assistantOptions.voice || !assistantOptions.transcriber) {
+          console.error('❌ Invalid assistant options - missing required fields');
+          alert('Invalid assistant configuration. Please check the setup.');
+          return;
+        }
+        
         await vapi.start(assistantOptions);
       } else if (assistantId) {
+        console.log('📋 Using assistant ID:', assistantId);
         await vapi.start(assistantId);
+      } else {
+        console.error('❌ No assistant options or ID provided');
+        alert('No assistant configuration provided. Please check the setup.');
+        return;
+      }
+      
+      console.log('✅ Vapi call started successfully');
+    } catch (error) {
+      console.error('❌ Error starting Vapi call:', error);
+      setCallStatus(CallStatus.INACTIVE);
+      
+      // Log detailed error information for debugging
+      if (error && typeof error === 'object') {
+        console.error('Error details:', {
+          message: (error as any).message,
+          status: (error as any).status,
+          response: (error as any).response,
+          stack: (error as any).stack
+        });
+      }
+      
+      // Provide user-friendly error messages
+      if (error instanceof Error) {
+        if (error.message.includes('microphone')) {
+          alert('Microphone access denied. Please allow microphone access and try again.');
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          alert('Network error. Please check your internet connection and try again.');
+        } else if (error.message.includes('api key') || error.message.includes('unauthorized')) {
+          alert('Authentication error. Please check your API key configuration.');
+        } else if (error.message.includes('400') || error.message.includes('Bad Request')) {
+          alert('Invalid assistant configuration. Please check the voice, model, and transcriber settings.');
+        } else {
+          alert(`Failed to start interview: ${error.message}`);
+        }
+      } else {
+        alert('Failed to start interview. Please try again or refresh the page.');
       }
     }
   };
