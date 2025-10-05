@@ -10,12 +10,14 @@ export class InterviewService {
   }
 
   static async createInterviewSession(
+    userId: string,
     jobPostingUrl: string,
     metadata: InterviewMetadata
   ): Promise<string> {
     const collection = await this.getCollection()
     
     const interviewSession: Omit<InterviewSession, '_id'> = {
+      userId,
       jobPostingUrl,
       metadata,
       qaPairs: [],
@@ -24,7 +26,13 @@ export class InterviewService {
       status: 'generated'
     }
 
+    console.log('💾 Inserting interview session into MongoDB:', {
+      userId,
+      jobPostingUrl,
+      status: interviewSession.status
+    })
     const result = await collection.insertOne(interviewSession)
+    console.log('✅ Interview session inserted with _id:', result.insertedId.toString())
     return result.insertedId.toString()
   }
 
@@ -51,6 +59,21 @@ export class InterviewService {
       return sessions
     } catch (error) {
       console.error('Error fetching interview sessions:', error)
+      return []
+    }
+  }
+
+  static async getUserInterviewSessions(userId: string): Promise<InterviewSession[]> {
+    const collection = await this.getCollection()
+    
+    try {
+      const sessions = await collection
+        .find({ userId })
+        .sort({ createdAt: -1 })
+        .toArray()
+      return sessions
+    } catch (error) {
+      console.error('Error fetching user interview sessions:', error)
       return []
     }
   }
@@ -201,6 +224,49 @@ export class InterviewService {
       return session?.questions || null
     } catch (error) {
       console.error('Error fetching questions:', error)
+      return null
+    }
+  }
+
+  static async saveAnalysis(sessionId: string, analysis: any): Promise<boolean> {
+    const collection = await this.getCollection()
+    
+    try {
+      console.log('💾 Saving analysis for session:', sessionId)
+      const result = await collection.updateOne(
+        { _id: new ObjectId(sessionId) },
+        { 
+          $set: { 
+            analysis: analysis,
+            updatedAt: new Date()
+          }
+        }
+      )
+      console.log('✅ Analysis saved successfully')
+      return result.modifiedCount > 0 || result.matchedCount > 0
+    } catch (error) {
+      console.error('Error saving analysis:', error)
+      return false
+    }
+  }
+
+  static async getAnalysis(sessionId: string): Promise<any | null> {
+    const collection = await this.getCollection()
+    
+    try {
+      console.log('🔍 Fetching analysis for session:', sessionId)
+      const session = await collection.findOne(
+        { _id: new ObjectId(sessionId) },
+        { projection: { analysis: 1 } }
+      )
+      if (session?.analysis) {
+        console.log('✅ Analysis found in database')
+      } else {
+        console.log('❌ No analysis found in database')
+      }
+      return session?.analysis || null
+    } catch (error) {
+      console.error('Error fetching analysis:', error)
       return null
     }
   }

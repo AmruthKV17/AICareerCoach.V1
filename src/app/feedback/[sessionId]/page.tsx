@@ -37,6 +37,7 @@ export default function FeedbackPage() {
         }
 
         const metadataData = await metadataResponse.json()
+        // console.log('Metadata data:', metadataData)
         const qaPairsData = await qaPairsResponse.json()
 
         if (!metadataData.success || !qaPairsData.success) {
@@ -48,6 +49,7 @@ export default function FeedbackPage() {
           qaPairs: qaPairsData.data,
           sessionId
         }
+        // console.log('Interview data:', interviewDataObj)
 
         setInterviewData(interviewDataObj)
 
@@ -259,7 +261,7 @@ export default function FeedbackPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-gray-50/80 rounded-2xl backdrop-blur-sm border border-gray-100">
                   <span className="font-medium text-gray-600">Topic:</span>
-                  <span className="text-gray-800 font-semibold">{interviewData.metadata.topic}</span>
+                  <span className="text-gray-800 font-semibold">{interviewData.metadata?.topic || 'N/A'}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 bg-gray-50/80 rounded-2xl backdrop-blur-sm border border-gray-100">
                   <span className="font-medium text-gray-600">Difficulty:</span>
@@ -274,7 +276,7 @@ export default function FeedbackPage() {
                 <div className="p-4 bg-gray-50/80 rounded-2xl backdrop-blur-sm border border-gray-100">
                   <span className="font-medium text-gray-600 block mb-3">Expected Keywords:</span>
                   <div className="flex flex-wrap gap-2">
-                    {interviewData.metadata.expected_keywords.map((keyword, index) => (
+                    {interviewData.metadata.expected_keywords?.map((keyword, index) => (
                       <span key={index} className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full border border-blue-200 font-medium">
                         {keyword}
                       </span>

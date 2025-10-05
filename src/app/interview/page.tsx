@@ -1,90 +1,50 @@
 "use client"
-
+import { useAuth } from "@clerk/clerk-react";
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import InterviewQuestionsGenerator from "@/components/InterviewQuestionsGenerator"
 import { SessionUtils } from '@/lib/sessionUtils'
 
 export default function InterviewPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [isCreatingSession, setIsCreatingSession] = useState(true)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const { isLoaded, isSignedIn, userId, getToken } = useAuth()
 
   useEffect(() => {
-    const initializeSession = async () => {
-      try {
-        // Check URL params first
-        const urlSessionId = searchParams.get('sessionId')
-        
-        if (urlSessionId) {
-          // Use session from URL
-          console.log('Using session from URL:', urlSessionId)
-          setSessionId(urlSessionId)
-          SessionUtils.setSessionId(urlSessionId)
-          setIsCreatingSession(false)
-          return
-        }
-
-        // Check local storage
-        const storedSessionId = SessionUtils.getSessionId()
-        
-        if (storedSessionId) {
-          // Verify the session exists in database
-          const response = await fetch(`/api/interview-sessions/${storedSessionId}`)
-          const data = await response.json()
-          
-          if (data.success) {
-            console.log('Using existing session from storage:', storedSessionId)
-            setSessionId(storedSessionId)
-            setIsCreatingSession(false)
-            return
-          } else {
-            // Session doesn't exist, clear it
-            SessionUtils.clearSessionId()
-          }
-        }
-
-        // No valid session found, create a new one
-        console.log('Creating new interview session')
-        const createResponse = await fetch('/api/interview-sessions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            jobPostingUrl: 'pending', // Will be updated when user submits
-            metadata: {
-              expected_keywords: [],
-              difficulty: 'medium',
-              topic: 'Interview'
-            }
-          })
-        })
-
-        const createData = await createResponse.json()
-        
-        if (createData.success && createData.data?._id) {
-          const newSessionId = createData.data._id.toString()
-          console.log('New session created:', newSessionId)
-          setSessionId(newSessionId)
-          SessionUtils.setSessionId(newSessionId)
-        }
-      } catch (error) {
-        console.error('Error initializing session:', error)
-      } finally {
-        setIsCreatingSession(false)
-      }
+    if (!isLoaded) return
+    
+    if (!isSignedIn) {
+      router.push('/sign-in')
+      return
     }
 
-    initializeSession()
-  }, [searchParams])
+    // Check if viewing an existing session via URL parameter
+    const urlSessionId = searchParams.get('sessionId')
+    
+    if (urlSessionId) {
+      // User wants to view a specific existing session
+      console.log('📖 Viewing existing session from URL:', urlSessionId)
+      setSessionId(urlSessionId)
+      SessionUtils.setSessionId(urlSessionId)
+    } else {
+      // No URL parameter - user will create session when generating questions
+      console.log('👤 User authenticated, ready to generate questions')
+      // Clear any old session from localStorage
+      SessionUtils.clearSessionId()
+      setSessionId(null)
+    }
+    
+    setIsCheckingAuth(false)
+  }, [isLoaded, isSignedIn, searchParams])
 
-  if (isCreatingSession) {
+  if (isCheckingAuth) {
     return (
       <div className="min-h-screen p-8 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Initializing session...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     )

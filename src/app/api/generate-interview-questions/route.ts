@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { InterviewService } from '@/lib/interviewService'
 import { InterviewMetadata } from '@/types/interview'
 import { dummyInterviewData } from '@/types/questions'
+import { auth, currentUser } from '@clerk/nextjs/server'
+import { UserService } from '@/lib/userService'
 
 interface InterviewQuestionsRequest {
   job_posting_url: string
@@ -9,9 +11,34 @@ interface InterviewQuestionsRequest {
   session_id?: string
 }
 
-
 export async function POST(request: Request) {
   try {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    // Get user info from Clerk and ensure user exists in database
+    const user = await currentUser()
+
+    const createdUser = await UserService.getOrCreateUser(
+      userId,
+      user?.emailAddresses[0]?.emailAddress || '',
+      user?.firstName || undefined,
+      user?.lastName || undefined,
+      user?.imageUrl || undefined
+    )
+
+    if (createdUser) {
+      console.log('✅ User ensured in MongoDB:', createdUser.clerkId)
+    } else {
+      console.log('⚠️ User creation/retrieval returned null')
+    }
+
     const body: InterviewQuestionsRequest = await request.json()
     const { job_posting_url, use_dummy_data = false, session_id } = body
 
@@ -52,6 +79,7 @@ export async function POST(request: Request) {
         } else {
           // Create new session with metadata
           finalSessionId = await InterviewService.createInterviewSession(
+            userId,
             job_posting_url,
             metadata
           );
@@ -202,6 +230,7 @@ export async function POST(request: Request) {
             } else {
               // Create new session with metadata
               finalSessionId = await InterviewService.createInterviewSession(
+                userId,
                 job_posting_url,
                 metadata
               );

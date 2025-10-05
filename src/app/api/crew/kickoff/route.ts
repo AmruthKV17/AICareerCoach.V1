@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     
     
     try {
-      const crewAIResponse = await fetch('https://holistic-interview-evaluation-with-advanced-ec5b7696.crewai.com/kickoff', {
+      const crewAIResponse = await fetch('https://holistic-interview-evaluator-with-reference-ae2ff779.crewai.com/kickoff', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.CREWAI_API_KEY2}`,
@@ -186,7 +186,7 @@ export async function POST(request: Request) {
         }
         
         const statusResponse = await fetch(
-          `https://holistic-interview-evaluation-with-advanced-ec5b7696.crewai.com/status/${crewData.kickoff_id}`,
+          `https://holistic-interview-evaluator-with-reference-ae2ff779.crewai.com/status/${crewData.kickoff_id}`,
           {
             method: 'GET',
             headers: {

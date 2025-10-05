@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { InterviewMetadata } from '@/types/interview'
-import { ChevronDown, ChevronUp, Code, Zap, Target, TrendingUp, Award, BookOpen, Users, Rocket, Brain, MessageSquare, CheckCircle, AlertCircle, Star, Activity, ExternalLink, Clock, Calendar, Lightbulb, GitBranch, PlayCircle, FileText, Link2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Code, Zap, Target, TrendingUp, Award, BookOpen, Users, Rocket, Brain, MessageSquare, CheckCircle, AlertCircle, Star, Activity, ExternalLink, Clock, Calendar, Lightbulb, GitBranch, PlayCircle, FileText, Link2, GraduationCap } from 'lucide-react';
 
 interface InterviewData {
   metadata: InterviewMetadata
@@ -75,10 +75,14 @@ export default function AnalysisPage() {
 
   // Get icon for resource type
   const getResourceIcon = (type: string) => {
-    switch(type) {
-      case 'video': return PlayCircle
-      case 'docs': return FileText
-      case 'course': return BookOpen
+    const lowerType = type.toLowerCase()
+    switch(true) {
+      case lowerType.includes('video') || lowerType.includes('youtube'): return PlayCircle
+      case lowerType.includes('book'): return BookOpen
+      case lowerType.includes('course') || lowerType.includes('online course'): return GraduationCap
+      case lowerType.includes('docs') || lowerType.includes('documentation'): return FileText
+      case lowerType.includes('tutorial'): return PlayCircle
+      case lowerType.includes('article'): return FileText
       default: return Link2
     }
   }
@@ -232,7 +236,24 @@ export default function AnalysisPage() {
 
         setInterviewData(data)
 
-        // Start analysis
+        // Check if analysis already exists in database
+        console.log('🔍 Checking if analysis already exists for session:', sessionId)
+        const existingAnalysisResponse = await fetch(`/api/interview-sessions/${sessionId}/analysis`)
+        
+        if (existingAnalysisResponse.ok) {
+          const existingAnalysisData = await existingAnalysisResponse.json()
+          
+          if (existingAnalysisData.success && existingAnalysisData.data) {
+            console.log('✅ Found existing analysis in database, using cached version')
+            setAnalysisResult(existingAnalysisData.data)
+            setLoading(false)
+            isAnalysisRunning.current = false
+            return
+          }
+        }
+
+        console.log('❌ No existing analysis found, generating new analysis...')
+        // Start new analysis
         await startAnalysis(data)
         
       } catch (err) {
@@ -292,20 +313,45 @@ export default function AnalysisPage() {
       }
 
       const result = await response.json()
-      console.log(result);
+      // console.log(result);
       
       console.log('✅ Analysis API Response:', result)
       
       // Check if we got a successful response with data
       if (result.success && result.data) {
+        let analysisData
+        
         // Check if we have final_assessment in the data
         if (result.data.final_assessment) {
-          setAnalysisResult(result.data.final_assessment)
-          console.log('✅ Analysis complete with final_assessment:', result.data.final_assessment)
+          analysisData = result.data.final_assessment
+          console.log('✅ Analysis complete with final_assessment:', analysisData)
         } else {
           // Fallback to the full data object
-          setAnalysisResult(result.data)
-          console.log('✅ Analysis complete with full data:', result.data)
+          analysisData = result.data
+          console.log('✅ Analysis complete with full data:', analysisData)
+        }
+        
+        setAnalysisResult(analysisData)
+        
+        // Save analysis to database for future use
+        console.log('💾 Saving analysis to database for session:', data.sessionId)
+        try {
+          const saveResponse = await fetch(`/api/interview-sessions/${data.sessionId}/analysis`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ analysis: analysisData }),
+          })
+          
+          if (saveResponse.ok) {
+            console.log('✅ Analysis saved to database successfully')
+          } else {
+            console.warn('⚠️ Failed to save analysis to database, but analysis is still available')
+          }
+        } catch (saveError) {
+          console.error('❌ Error saving analysis to database:', saveError)
+          // Don't throw error - analysis is still available in memory
         }
       } else {
         console.error('❌ API returned success but no data:', result)
@@ -437,7 +483,7 @@ export default function AnalysisPage() {
   // Analysis Results Display
   return (
     <div>
-      {/* Debug Information */}
+      {/* Debug Information
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-4 right-4 bg-black text-white p-4 rounded-lg text-xs max-w-md z-50">
           <h3 className="font-bold mb-2">Debug Info:</h3>
@@ -498,7 +544,7 @@ export default function AnalysisPage() {
             </details>
           )}
         </div>
-      )}
+      )} */}
       
       {/* Analysis Results */}
       {analysisResult && (
@@ -529,24 +575,24 @@ export default function AnalysisPage() {
             <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12">
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div className="flex justify-center">
-                  <CircularProgress score={getAnalysisData().holistic_assessment?.overall_competency_score || 75} />
+                  <CircularProgress score={getAnalysisData().overall_evaluation?.overall_competency_score || 75} />
                 </div>
                 <div className="space-y-4">
                   <MiniProgress
                     label="Communication Effectiveness"
-                    score={getAnalysisData().holistic_assessment?.communication_effectiveness || 70}
+                    score={getAnalysisData().overall_evaluation?.communication_effectiveness || 70}
                     icon={MessageSquare}
                     color="bg-blue-500"
                   />
                   <MiniProgress
                     label="Knowledge Consistency"
-                    score={getAnalysisData().holistic_assessment?.knowledge_consistency || 75}
+                    score={getAnalysisData().overall_evaluation?.knowledge_consistency || 75}
                     icon={BookOpen}
                     color="bg-purple-500"
                   />
                   <MiniProgress
                     label="Problem Solving Approach"
-                    score={getAnalysisData().holistic_assessment?.problem_solving_approach || 72}
+                    score={getAnalysisData().overall_evaluation?.problem_solving_approach || 72}
                     icon={Brain}
                     color="bg-pink-500"
                   />
@@ -569,7 +615,7 @@ export default function AnalysisPage() {
                     <h3 className="text-xl font-bold text-gray-800">Comprehensive Strengths</h3>
                   </div>
                   <div className="space-y-3">
-                    {(getAnalysisData().holistic_assessment?.comprehensive_strengths || ['Good technical understanding', 'Clear communication']).map((strength: any, idx: number) => (
+                    {(getAnalysisData().overall_evaluation?.comprehensive_strengths || ['Good technical understanding', 'Clear communication']).map((strength: any, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                         <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">
@@ -592,7 +638,7 @@ export default function AnalysisPage() {
                     <h3 className="text-xl font-bold text-gray-800">Improvement Areas</h3>
                   </div>
                   <div className="space-y-3">
-                    {(getAnalysisData().holistic_assessment?.improvement_areas || ['Technical depth', 'Practical examples']).map((area: any, idx: number) => (
+                    {(getAnalysisData().overall_evaluation?.improvement_areas || ['Technical depth', 'Practical examples']).map((area: any, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors">
                         <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">
@@ -609,7 +655,7 @@ export default function AnalysisPage() {
           {/* Expandable Analysis Sections */}
           <div className="container mx-auto px-4 mt-12 space-y-4">
             {/* Competency Analysis */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+            {/* <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
               <button
                 onClick={() => toggleSection('competency')}
                 className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -629,29 +675,29 @@ export default function AnalysisPage() {
                       <Star className="w-4 h-4 text-blue-500" />
                       Strengths
                     </h4>
-                    <p className="text-gray-600">{getAnalysisData().holistic_assessment?.competency_analysis?.strengths || 'You demonstrate good technical understanding and clear communication skills.'}</p>
+                    <p className="text-gray-600">{getAnalysisData().overall_evaluation?.competency_analysis?.strengths || 'You demonstrate good technical understanding and clear communication skills.'}</p>
                   </div>
-                  {getAnalysisData().holistic_assessment?.competency_analysis?.gaps && (
+                  {getAnalysisData().overall_evaluation?.competency_analysis?.gaps && (
                     <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl">
                       <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
                         <AlertCircle className="w-4 h-4 text-red-500" />
                         Knowledge Gaps
                       </h4>
-                      <p className="text-gray-600">{getAnalysisData().holistic_assessment?.competency_analysis?.gaps}</p>
+                      <p className="text-gray-600">{getAnalysisData().overall_evaluation?.competency_analysis?.gaps}</p>
                     </div>
                   )}
-                  {getAnalysisData().holistic_assessment?.competency_analysis?.areas_for_improvement && (
+                  {getAnalysisData().overall_evaluation?.competency_analysis?.areas_for_improvement && (
                     <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl">
                       <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-amber-500" />
                         Areas for Improvement
                       </h4>
-                      <p className="text-gray-600">{getAnalysisData().holistic_assessment?.competency_analysis?.areas_for_improvement}</p>
+                      <p className="text-gray-600">{getAnalysisData().overall_evaluation?.competency_analysis?.areas_for_improvement}</p>
                     </div>
                   )}
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* Detailed Feedback */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -671,7 +717,7 @@ export default function AnalysisPage() {
                 <div className="px-6 pb-6 animate-fade-in">
                   <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
                     <p className="text-gray-600 leading-relaxed">
-                      {getAnalysisData().holistic_assessment?.detailed_feedback || 'Overall performance shows good potential with opportunities for improvement in technical depth and practical application examples.'}
+                      {getAnalysisData().overall_evaluation?.detailed_feedback || 'Overall performance shows good potential with opportunities for improvement in technical depth and practical application examples.'}
                     </p>
                   </div>
                 </div>
@@ -744,12 +790,72 @@ export default function AnalysisPage() {
                                   </div>
                                   <div className="flex-1">
                                     <h4 className="font-bold text-xl text-gray-800 mb-2">{item.topic || item.area}</h4>
-                                    <p className="text-gray-600 leading-relaxed">
-                                      {typeof (item.description || item.recommendation) === 'object' 
-                                        ? (item.description?.description || item.recommendation?.description || JSON.stringify(item.description || item.recommendation))
-                                        : (item.description || item.recommendation)
-                                      }
-                                    </p>
+                                    {/* Actionable Steps */}
+                                    {item.actionable_steps && item.actionable_steps.length > 0 && (
+                                      <div className="space-y-3">
+                                        <h5 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                          <Target className="w-5 h-5 text-purple-600" />
+                                          Actionable Steps
+                                        </h5>
+                                        {item.actionable_steps.map((stepItem: any, stepIdx: number) => (
+                                          <div key={stepIdx} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                            <div className="flex items-start gap-3">
+                                              <div className="w-6 h-6 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                                                {stepIdx + 1}
+                                              </div>
+                                              <div className="flex-1">
+                                                <p className="text-gray-700 text-md font-semibold mb-3 leading-relaxed">
+                                                  {stepItem.step || stepItem.description}
+                                                </p>
+                                                {/* Resources for this step */}
+                                                {stepItem.resources && stepItem.resources.length > 0 && (
+                                                  <div className="space-y-2">
+                                                    <p className="text-sm font-medium text-gray-600">Resources:</p>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                      {stepItem.resources.map((resource: any, rIdx: number) => {
+                                                        // Handle new resource structure with title, type, and link
+                                                        const resourceTitle = resource.title || resource
+                                                        const resourceType = resource.type || 'general'
+                                                        const resourceUrl = resource.link || formatResourceLink(resource).url
+                                                        const Icon = getResourceIcon(resourceType.toLowerCase())
+                                                        const isHovered = hoveredResource === `${resourceId}-${stepIdx}-${rIdx}`
+                                                        
+                                                        return (
+                                                          <a
+                                                            key={rIdx}
+                                                            href={resourceUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            onMouseEnter={() => setHoveredResource(`${resourceId}-${stepIdx}-${rIdx}`)}
+                                                            onMouseLeave={() => setHoveredResource(null)}
+                                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${
+                                                              isHovered
+                                                                ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300 shadow-md transform -translate-y-0.5'
+                                                                : 'bg-white border-gray-200 hover:border-purple-200'
+                                                            }`}
+                                                          >
+                                                            <Icon className={`w-5 h-5 flex-shrink-0 ${
+                                                              isHovered ? 'text-purple-600' : 'text-gray-500'
+                                                            }`} />
+                                                            <div className="flex-1">
+                                                              <span className="text-sm font-medium text-gray-700 block">{resourceTitle}</span>
+                                                              <span className="text-xs text-gray-500">{resourceType}</span>
+                                                            </div>
+                                                            <ExternalLink className={`w-4 h-4 ${
+                                                              isHovered ? 'text-purple-600' : 'text-gray-400'
+                                                            }`} />
+                                                          </a>
+                                                        )
+                                                      })}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 {item.resources && (
@@ -762,7 +868,7 @@ export default function AnalysisPage() {
                                 )}
                               </div>
                               
-                              {/* Resources Section */}
+                              {/* Resources Section (Legacy support) */}
                               {item.resources && isExpanded && (
                                 <div className="mt-4 pt-4 border-t border-purple-100 animate-fade-in">
                                   <h5 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -770,15 +876,18 @@ export default function AnalysisPage() {
                                     Recommended Resources
                                   </h5>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {item.resources.map((resource: string, rIdx: number) => {
-                                      const resourceLink = formatResourceLink(resource)
-                                      const Icon = getResourceIcon(resourceLink.type)
+                                    {item.resources.map((resource: any, rIdx: number) => {
+                                      // Handle new resource structure with title, type, and link
+                                      const resourceTitle = resource.title || resource
+                                      const resourceType = resource.type || 'general'
+                                      const resourceUrl = resource.link || formatResourceLink(resource).url
+                                      const Icon = getResourceIcon(resourceType.toLowerCase())
                                       const isHovered = hoveredResource === `${resourceId}-${rIdx}`
                                       
                                       return (
                                         <a
                                           key={rIdx}
-                                          href={resourceLink.url}
+                                          href={resourceUrl}
                                           target="_blank"
                                           rel="noopener noreferrer"
                                           onMouseEnter={() => setHoveredResource(`${resourceId}-${rIdx}`)}
@@ -792,7 +901,10 @@ export default function AnalysisPage() {
                                           <Icon className={`w-5 h-5 flex-shrink-0 ${
                                             isHovered ? 'text-purple-600' : 'text-gray-500'
                                           }`} />
-                                          <span className="text-sm text-gray-700 flex-1">{resource}</span>
+                                          <div className="flex-1">
+                                            <span className="text-sm font-medium text-gray-700 block">{resourceTitle}</span>
+                                            <span className="text-xs text-gray-500">{resourceType}</span>
+                                          </div>
                                           <ExternalLink className={`w-4 h-4 ${
                                             isHovered ? 'text-purple-600' : 'text-gray-400'
                                           }`} />
@@ -819,6 +931,7 @@ export default function AnalysisPage() {
                             getAnalysisData().recommended_action_plan?.medium_term_development.map((phase: any, phaseIdx: number) => (
                               <div key={phaseIdx} className="space-y-4">
                                 {/* Timeline Header for each phase */}
+                                {/* {console.log('Medium Term Development:', phase)} */}
                                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
                                   <div className="flex items-center gap-3 mb-3">
                                     <Calendar className="w-6 h-6 text-blue-600" />
@@ -826,12 +939,11 @@ export default function AnalysisPage() {
                                       Development Phase {phaseIdx + 1}
                                     </h3>
                                   </div>
-                                  <p className="text-gray-600 mb-2">
-                                    <span className="font-semibold">Duration:</span> {phase.timeline || '3-6 months'}
+                                  <p className="text-gray-600 text-sm mb-2">
+                                    <span className="text-gray-500">Duration:</span> {phase.timeline || '3-6 months'}
                                   </p>
                                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <Clock className="w-4 h-4" />
-                                    <span>Consistent practice and dedication required</span>
+                                    <h4 className='font-semibold text-md text-gray-800'>{phase.goal}</h4>
                                   </div>
                                 </div>
 

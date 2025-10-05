@@ -18,10 +18,12 @@ export interface InterviewMetadata {
 
 export interface InterviewSession {
   _id?: ObjectId
+  userId: string // Clerk user ID
   jobPostingUrl: string
   metadata: InterviewMetadata
   questions?: InterviewQuestions
   qaPairs?: Array<{ question: string, answer: string }>
+  analysis?: any // Stores the AI-generated analysis result
   createdAt: Date
   updatedAt: Date
   status: 'generated' | 'in_progress' | 'completed'
