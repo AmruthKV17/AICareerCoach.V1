@@ -774,7 +774,7 @@ export default function AnalysisPage() {
                 <div className="p-6">
                   {activeTab === 'immediate' && (
                     <div className="space-y-6 animate-fade-in">
-                      {(getAnalysisData().recommended_action_plan?.immediate_focus || []).map((item: any, idx: number) => {
+                      {(getAnalysisData().recommended_action_plan?.immediate_focus?.specific_actions || []).map((item: any, idx: number) => {
                         const resourceId = `immediate-${idx}`
                         const isExpanded = expandedResources[resourceId]
                         
@@ -789,7 +789,7 @@ export default function AnalysisPage() {
                                     {idx + 1}
                                   </div>
                                   <div className="flex-1">
-                                    <h4 className="font-bold text-xl text-gray-800 mb-2">{item.topic || item.area}</h4>
+                                    <h4 className="font-bold text-xl text-gray-800 mb-2">{item.action || item.area}</h4>
                                     {/* Actionable Steps */}
                                     {item.actionable_steps && item.actionable_steps.length > 0 && (
                                       <div className="space-y-3">
@@ -928,7 +928,7 @@ export default function AnalysisPage() {
                           {/* Check if medium_term_development is an array or object */}
                           {Array.isArray(getAnalysisData().recommended_action_plan?.medium_term_development) ? (
                             // Handle array structure
-                            getAnalysisData().recommended_action_plan?.medium_term_development.map((phase: any, phaseIdx: number) => (
+                            getAnalysisData().recommended_action_plan?.medium_term_development?.specific_actions.map((phase: any, phaseIdx: number) => (
                               <div key={phaseIdx} className="space-y-4">
                                 {/* Timeline Header for each phase */}
                                 {/* {console.log('Medium Term Development:', phase)} */}
