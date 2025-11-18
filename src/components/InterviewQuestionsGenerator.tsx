@@ -153,6 +153,9 @@ export default function InterviewQuestionsGenerator({ initialSessionId }: Interv
   const handleStartMockInterview = () => {
     router.push('/mock-interview')
   }
+  const handleStartVideoInterview = () => {
+    router.push('/video-interview')
+  }
 
   // Show loading state while checking for existing questions
   if (checkingSession) {
@@ -498,7 +501,7 @@ export default function InterviewQuestionsGenerator({ initialSessionId }: Interv
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.9 }}
-              className="mt-10 flex justify-center"
+              className="mt-10 flex gap-5 justify-center"
             >
               <motion.button
                 onClick={handleStartMockInterview}
@@ -509,7 +512,29 @@ export default function InterviewQuestionsGenerator({ initialSessionId }: Interv
                          transition-all duration-300 font-semibold text-lg shadow-xl
                          hover:shadow-2xl flex items-center gap-3 group"
               >
-                <span>Start Mock Interview Now</span>
+                <span>Start Voice Interview Now</span>
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-5 w-5 group-hover:translate-x-1 transition-transform" 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor"
+                >
+                  <path fillRule="evenodd" 
+                        d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" 
+                        clipRule="evenodd" 
+                  />
+                </svg>
+              </motion.button>
+              <motion.button
+                onClick={handleStartVideoInterview}
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-10 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white 
+                         rounded-xl hover:from-green-700 hover:to-emerald-700 
+                         transition-all duration-300 font-semibold text-lg shadow-xl
+                         hover:shadow-2xl flex items-center gap-3 group"
+              >
+                <span>Start Video Interview Now</span>
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
                   className="h-5 w-5 group-hover:translate-x-1 transition-transform" 
