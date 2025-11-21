@@ -237,20 +237,20 @@ export default function AnalysisPage() {
         setInterviewData(data)
 
         // Check if analysis already exists in database
-        console.log('🔍 Checking if analysis already exists for session:', sessionId)
-        const existingAnalysisResponse = await fetch(`/api/interview-sessions/${sessionId}/analysis`)
+        // console.log('🔍 Checking if analysis already exists for session:', sessionId)
+        // const existingAnalysisResponse = await fetch(`/api/interview-sessions/${sessionId}/analysis`)
         
-        if (existingAnalysisResponse.ok) {
-          const existingAnalysisData = await existingAnalysisResponse.json()
+        // if (existingAnalysisResponse.ok) {
+        //   const existingAnalysisData = await existingAnalysisResponse.json()
           
-          if (existingAnalysisData.success && existingAnalysisData.data) {
-            console.log('✅ Found existing analysis in database, using cached version')
-            setAnalysisResult(existingAnalysisData.data)
-            setLoading(false)
-            isAnalysisRunning.current = false
-            return
-          }
-        }
+        //   if (existingAnalysisData.success && existingAnalysisData.data) {
+        //     console.log('✅ Found existing analysis in database, using cached version')
+        //     setAnalysisResult(existingAnalysisData.data)
+        //     setLoading(false)
+        //     isAnalysisRunning.current = false
+        //     return
+        //   }
+        // }
 
         console.log('❌ No existing analysis found, generating new analysis...')
         // Start new analysis

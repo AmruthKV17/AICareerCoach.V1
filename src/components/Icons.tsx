@@ -1,13 +1,102 @@
-export function HeyGenLogo() {
-  return <img alt="HeyGen Logo" className="h-8" src="/heygen-logo.png" />;
-}
-
 type IconSvgProps = {
   size?: number;
   width?: number;
   height?: number;
   className?: string;
 };
+
+export function HeyGenLogo() {
+  return <img alt="HeyGen Logo" className="h-8" src="/heygen-logo.png" />;
+}
+
+export function CameraIcon({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) {
+  return (
+    <svg
+      fill="none"
+      height={size || height}
+      viewBox="0 0 24 24"
+      width={size || width}
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <rect
+        height="11"
+        rx="3"
+        stroke="currentColor"
+        strokeWidth="2"
+        width="18"
+        x="3"
+        y="7"
+      />
+      <path
+        d="M8 7L9.5 4.5H14.5L16 7"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <circle
+        cx="12"
+        cy="12.5"
+        r="3"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+export function CameraOffIcon({
+  size = 24,
+  width,
+  height,
+  ...props
+}: IconSvgProps) {
+  return (
+    <svg
+      fill="none"
+      height={size || height}
+      viewBox="0 0 24 24"
+      width={size || width}
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+    >
+      <path
+        d="M7 7H17C18.6569 7 20 8.34315 20 10V15C20 16.6569 18.6569 18 17 18H9"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M7 7L5.5 4H2"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M14 13.5C14 12.1193 12.8807 11 11.5 11"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        d="M2 2L22 22"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
 
 export function GithubIcon({
   size = 24,
