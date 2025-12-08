@@ -15,7 +15,7 @@ export default function AnalysisPage() {
   const params = useParams()
   const router = useRouter()
   const sessionId = params.sessionId as string
-  
+
   const [interviewData, setInterviewData] = useState<InterviewData | null>(null)
   const [analysisResult, setAnalysisResult] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -23,7 +23,7 @@ export default function AnalysisPage() {
   const [analysisStep, setAnalysisStep] = useState(0)
   const [apiCallMade, setApiCallMade] = useState(false) // Prevent duplicate API calls
   const isAnalysisRunning = useRef(false) // Additional protection against double calls
-  
+
   // State for expandable sections and tabs (moved here to avoid hooks order issues)
   const [expandedSections, setExpandedSections] = useState({
     competency: false,
@@ -50,8 +50,18 @@ export default function AnalysisPage() {
 
   // Helper function to safely access analysis data
   const getAnalysisData = () => {
-    // analysisResult contains the final_assessment directly
+    // Check if we have the new structure with final_assessment
+    if (analysisResult?.final_assessment) {
+      return analysisResult.final_assessment
+    }
+    // Fallback for older structure
     return analysisResult || {}
+  }
+
+  // Helper to get holistic assessment data
+  const getHolisticAssessment = () => {
+    const data = getAnalysisData()
+    return data.holistic_assessment || data.overall_evaluation || {}
   }
 
   // Helper function to format resource links
@@ -76,7 +86,7 @@ export default function AnalysisPage() {
   // Get icon for resource type
   const getResourceIcon = (type: string) => {
     const lowerType = type.toLowerCase()
-    switch(true) {
+    switch (true) {
       case lowerType.includes('video') || lowerType.includes('youtube'): return PlayCircle
       case lowerType.includes('book'): return BookOpen
       case lowerType.includes('course') || lowerType.includes('online course'): return GraduationCap
@@ -150,7 +160,7 @@ export default function AnalysisPage() {
 
   const MiniProgress = ({ label, score, icon: Icon, color }: { label: string; score: number; icon: any; color: string }) => {
     const [width, setWidth] = useState(0);
-    
+
     useEffect(() => {
       setTimeout(() => setWidth(score), 200);
     }, [score]);
@@ -191,18 +201,18 @@ export default function AnalysisPage() {
         console.log('🔍 Fetching interview data for session:', sessionId)
         setApiCallMade(true) // Mark API call as made
         isAnalysisRunning.current = true // Set ref flag
-        
+
         // Get interview data from localStorage first
         let data: InterviewData | null = null
         const storedData = localStorage.getItem(`interview_${sessionId}`)
-        
+
         if (storedData) {
           data = JSON.parse(storedData)
           console.log('📋 Interview data loaded from localStorage:', data)
         } else {
           // Fallback: fetch from API if not in localStorage
           console.log('📋 No localStorage data found, fetching from API...')
-          
+
           const [metadataResponse, qaPairsResponse] = await Promise.all([
             fetch(`/api/interview-sessions/${sessionId}/metadata`),
             fetch(`/api/interview-sessions/${sessionId}/qa-pairs`)
@@ -239,10 +249,10 @@ export default function AnalysisPage() {
         // Check if analysis already exists in database
         // console.log('🔍 Checking if analysis already exists for session:', sessionId)
         // const existingAnalysisResponse = await fetch(`/api/interview-sessions/${sessionId}/analysis`)
-        
+
         // if (existingAnalysisResponse.ok) {
         //   const existingAnalysisData = await existingAnalysisResponse.json()
-          
+
         //   if (existingAnalysisData.success && existingAnalysisData.data) {
         //     console.log('✅ Found existing analysis in database, using cached version')
         //     setAnalysisResult(existingAnalysisData.data)
@@ -255,7 +265,7 @@ export default function AnalysisPage() {
         console.log('❌ No existing analysis found, generating new analysis...')
         // Start new analysis
         await startAnalysis(data)
-        
+
       } catch (err) {
         console.error('❌ Error fetching interview data:', err)
         setError(err instanceof Error ? err.message : 'Failed to load interview data')
@@ -287,7 +297,7 @@ export default function AnalysisPage() {
       console.log('📋 Interview Metadata:', data.metadata)
       console.log('📝 Interview Topic:', data.metadata.topic)
       console.log('📊 Interview Difficulty:', data.metadata.difficulty)
-      
+
       const response = await fetch('/api/crew/kickoff', {
         method: 'POST',
         headers: {
@@ -314,13 +324,13 @@ export default function AnalysisPage() {
 
       const result = await response.json()
       // console.log(result);
-      
+
       console.log('✅ Analysis API Response:', result)
-      
+
       // Check if we got a successful response with data
       if (result.success && result.data) {
         let analysisData
-        
+
         // Check if we have final_assessment in the data
         if (result.data.final_assessment) {
           analysisData = result.data.final_assessment
@@ -330,9 +340,9 @@ export default function AnalysisPage() {
           analysisData = result.data
           console.log('✅ Analysis complete with full data:', analysisData)
         }
-        
+
         setAnalysisResult(analysisData)
-        
+
         // Save analysis to database for future use
         console.log('💾 Saving analysis to database for session:', data.sessionId)
         try {
@@ -343,7 +353,7 @@ export default function AnalysisPage() {
             },
             body: JSON.stringify({ analysis: analysisData }),
           })
-          
+
           if (saveResponse.ok) {
             console.log('✅ Analysis saved to database successfully')
           } else {
@@ -357,7 +367,7 @@ export default function AnalysisPage() {
         console.error('❌ API returned success but no data:', result)
         throw new Error('Analysis completed but no data was returned')
       }
-      
+
     } catch (err) {
       console.error('❌ Error during analysis:', err)
       setError(err instanceof Error ? err.message : 'Analysis failed')
@@ -407,7 +417,7 @@ export default function AnalysisPage() {
                 <div className="text-white text-2xl">🤖</div>
               </div>
             </div>
-            
+
             {/* Floating particles */}
             <div className="absolute top-0 left-0 w-full h-full">
               {[...Array(6)].map((_, i) => (
@@ -428,10 +438,10 @@ export default function AnalysisPage() {
           {/* Progress Steps */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
             <h2 className="text-2xl font-bold text-gray-800 mb-4">AI Analysis in Progress</h2>
-            
+
             {/* Progress Bar */}
             <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-              <div 
+              <div
                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${((analysisStep + 1) / analysisSteps.length) * 100}%` }}
               ></div>
@@ -441,7 +451,7 @@ export default function AnalysisPage() {
             <div className="text-lg font-medium text-gray-700 mb-2">
               {analysisSteps[analysisStep]}
             </div>
-            
+
             {/* Step Counter */}
             <div className="text-sm text-gray-500">
               Step {analysisStep + 1} of {analysisSteps.length}
@@ -452,7 +462,7 @@ export default function AnalysisPage() {
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">💡 Did you know?</h3>
             <p className="text-gray-600 text-sm">
-              Our AI analyzes over 50 different aspects of your interview performance, 
+              Our AI analyzes over 50 different aspects of your interview performance,
               including communication clarity, technical accuracy, and confidence levels.
             </p>
           </div>
@@ -465,11 +475,10 @@ export default function AnalysisPage() {
                 <span>•</span>
                 <span>🎯 {interviewData.metadata.topic}</span>
                 <span>•</span>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  interviewData.metadata.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
-                  interviewData.metadata.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
+                <span className={`px-2 py-1 rounded text-xs ${interviewData.metadata.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
+                    interviewData.metadata.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                  }`}>
                   {interviewData.metadata.difficulty}
                 </span>
               </div>
@@ -545,7 +554,7 @@ export default function AnalysisPage() {
           )}
         </div>
       )} */}
-      
+
       {/* Analysis Results */}
       {analysisResult && (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
@@ -575,29 +584,53 @@ export default function AnalysisPage() {
             <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12">
               <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div className="flex justify-center">
-                  <CircularProgress score={getAnalysisData().overall_evaluation?.overall_competency_score || 75} />
+                  <CircularProgress score={getHolisticAssessment().overall_competency_score || 0} />
                 </div>
                 <div className="space-y-4">
                   <MiniProgress
                     label="Communication Effectiveness"
-                    score={getAnalysisData().overall_evaluation?.communication_effectiveness || 70}
+                    score={getHolisticAssessment().communication_effectiveness || 0}
                     icon={MessageSquare}
                     color="bg-blue-500"
                   />
                   <MiniProgress
                     label="Knowledge Consistency"
-                    score={getAnalysisData().overall_evaluation?.knowledge_consistency || 75}
+                    score={getHolisticAssessment().knowledge_consistency || 0}
                     icon={BookOpen}
                     color="bg-purple-500"
                   />
                   <MiniProgress
                     label="Problem Solving Approach"
-                    score={getAnalysisData().overall_evaluation?.problem_solving_approach || 72}
+                    score={getHolisticAssessment().problem_solving_approach || 0}
                     icon={Brain}
                     color="bg-pink-500"
                   />
                 </div>
               </div>
+
+              {/* New Keyword Mastery Section */}
+              {getHolisticAssessment().competency_analysis?.expected_keywords_usage && (
+                <div className="mt-8 pt-8 border-t border-gray-100">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Target className="w-5 h-5 text-indigo-600" />
+                    Keyword Mastery
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(getHolisticAssessment().competency_analysis.expected_keywords_usage).map(([keyword, count]: [string, any], idx) => (
+                      <div
+                        key={idx}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${Number(count) > 0
+                            ? 'bg-green-50 text-green-700 border-green-200'
+                            : 'bg-gray-50 text-gray-500 border-gray-200 decoration-gray-400'
+                          }`}
+                      >
+                        {keyword}
+                        {Number(count) > 0 && <span className="ml-2 px-1.5 py-0.5 bg-green-200 text-green-800 rounded-full text-xs">{String(count)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -615,7 +648,7 @@ export default function AnalysisPage() {
                     <h3 className="text-xl font-bold text-gray-800">Comprehensive Strengths</h3>
                   </div>
                   <div className="space-y-3">
-                    {(getAnalysisData().overall_evaluation?.comprehensive_strengths || ['Good technical understanding', 'Clear communication']).map((strength: any, idx: number) => (
+                    {(getHolisticAssessment().comprehensive_strengths || []).map((strength: any, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                         <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">
@@ -638,7 +671,7 @@ export default function AnalysisPage() {
                     <h3 className="text-xl font-bold text-gray-800">Improvement Areas</h3>
                   </div>
                   <div className="space-y-3">
-                    {(getAnalysisData().overall_evaluation?.improvement_areas || ['Technical depth', 'Practical examples']).map((area: any, idx: number) => (
+                    {(getHolisticAssessment().improvement_areas || []).map((area: any, idx: number) => (
                       <div key={idx} className="flex items-start gap-3 p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors">
                         <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                         <span className="text-gray-700">
@@ -652,77 +685,52 @@ export default function AnalysisPage() {
             </div>
           </div>
 
-          {/* Expandable Analysis Sections */}
-          <div className="container mx-auto px-4 mt-12 space-y-4">
-            {/* Competency Analysis */}
-            {/* <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <button
-                onClick={() => toggleSection('competency')}
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
-                    <Zap className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-lg font-semibold text-gray-800">Competency Analysis</span>
-                </div>
-                {expandedSections.competency ? <ChevronUp /> : <ChevronDown />}
-              </button>
-              {expandedSections.competency && (
-                <div className="px-6 pb-6 space-y-4 animate-fade-in">
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                    <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Star className="w-4 h-4 text-blue-500" />
-                      Strengths
+          {/* Feedback & Technical Analysis */}
+          <div className="container mx-auto px-4 mt-6 space-y-4">
+            {/* Technical Analysis Cards */}
+            {getHolisticAssessment().competency_analysis && (
+              <div className="grid md:grid-cols-2 gap-4">
+                {getHolisticAssessment().competency_analysis.technical_accuracy && (
+                  <div className="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-blue-500">
+                    <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                      <Code className="w-5 h-5 text-blue-500" />
+                      Technical Accuracy
                     </h4>
-                    <p className="text-gray-600">{getAnalysisData().overall_evaluation?.competency_analysis?.strengths || 'You demonstrate good technical understanding and clear communication skills.'}</p>
+                    <p className="text-gray-600 italic">
+                      "{getHolisticAssessment().competency_analysis.technical_accuracy}"
+                    </p>
                   </div>
-                  {getAnalysisData().overall_evaluation?.competency_analysis?.gaps && (
-                    <div className="p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-xl">
-                      <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-red-500" />
-                        Knowledge Gaps
-                      </h4>
-                      <p className="text-gray-600">{getAnalysisData().overall_evaluation?.competency_analysis?.gaps}</p>
-                    </div>
-                  )}
-                  {getAnalysisData().overall_evaluation?.competency_analysis?.areas_for_improvement && (
-                    <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl">
-                      <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-amber-500" />
-                        Areas for Improvement
-                      </h4>
-                      <p className="text-gray-600">{getAnalysisData().overall_evaluation?.competency_analysis?.areas_for_improvement}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div> */}
+                )}
+                {getHolisticAssessment().competency_analysis.concept_understanding && (
+                  <div className="bg-white p-6 rounded-2xl shadow-lg border-l-4 border-purple-500">
+                    <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-purple-500" />
+                      Concept Understanding
+                    </h4>
+                    <p className="text-gray-600 italic">
+                      "{getHolisticAssessment().competency_analysis.concept_understanding}"
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Detailed Feedback */}
-            <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-              <button
-                onClick={() => toggleSection('feedback')}
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
-                    <MessageSquare className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-lg font-semibold text-gray-800">Brief Feedback</span>
-                </div>
-                {expandedSections.feedback ? <ChevronUp /> : <ChevronDown />}
-              </button>
-              {expandedSections.feedback && (
-                <div className="px-6 pb-6 animate-fade-in">
+            {getHolisticAssessment().detailed_feedback && (
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden mt-4">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-purple-600" />
+                    Detailed Feedback
+                  </h3>
                   <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl">
-                    <p className="text-gray-600 leading-relaxed">
-                      {getAnalysisData().overall_evaluation?.detailed_feedback || 'Overall performance shows good potential with opportunities for improvement in technical depth and practical application examples.'}
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                      {getHolisticAssessment().detailed_feedback}
                     </p>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Action Plan Section */}
@@ -735,36 +743,33 @@ export default function AnalysisPage() {
                     <h2 className="text-2xl font-bold">Recommended Action Plan</h2>
                   </div>
                 </div>
-                
+
                 {/* Tab Navigation */}
                 <div className="flex flex-wrap border-b">
                   <button
                     onClick={() => setActiveTab('immediate')}
-                    className={`px-6 py-3 font-medium transition-colors ${
-                      activeTab === 'immediate'
+                    className={`px-6 py-3 font-medium transition-colors ${activeTab === 'immediate'
                         ? 'bg-indigo-50 text-indigo-600 border-b-2 border-indigo-600'
                         : 'text-gray-600 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Immediate Focus
                   </button>
                   <button
                     onClick={() => setActiveTab('medium')}
-                    className={`px-6 py-3 font-medium transition-colors ${
-                      activeTab === 'medium'
+                    className={`px-6 py-3 font-medium transition-colors ${activeTab === 'medium'
                         ? 'bg-indigo-50 text-indigo-600 border-b-2 border-indigo-600'
                         : 'text-gray-600 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Medium-Term Development
                   </button>
                   <button
                     onClick={() => setActiveTab('strengths')}
-                    className={`px-6 py-3 font-medium transition-colors ${
-                      activeTab === 'strengths'
+                    className={`px-6 py-3 font-medium transition-colors ${activeTab === 'strengths'
                         ? 'bg-indigo-50 text-indigo-600 border-b-2 border-indigo-600'
                         : 'text-gray-600 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     Strength Utilization
                   </button>
@@ -774,10 +779,29 @@ export default function AnalysisPage() {
                 <div className="p-6">
                   {activeTab === 'immediate' && (
                     <div className="space-y-6 animate-fade-in">
-                      {(getAnalysisData().recommended_action_plan?.immediate_focus?.specific_actions || []).map((item: any, idx: number) => {
+                      {/* Check if immediate_focus is an array of strings (new format) or objects (old format) */}
+                      {(getAnalysisData().recommended_action_plan?.immediate_focus || []).map((item: any, idx: number) => {
+                        const isStringItem = typeof item === 'string';
                         const resourceId = `immediate-${idx}`
                         const isExpanded = expandedResources[resourceId]
-                        
+
+                        if (isStringItem) {
+                          return (
+                            <div key={idx} className="relative group">
+                              <div className="relative bg-white border border-purple-100 rounded-2xl p-6 hover:shadow-xl transition-all duration-300">
+                                <div className="flex items-start gap-4">
+                                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                                    {idx + 1}
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-800 text-lg font-medium">{item}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        }
+
                         return (
                           <div key={idx} className="relative group">
                             <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-pink-400 rounded-2xl blur-xl opacity-0 group-hover:opacity-20 transition-opacity"></div>
@@ -819,7 +843,7 @@ export default function AnalysisPage() {
                                                         const resourceUrl = resource.link || formatResourceLink(resource).url
                                                         const Icon = getResourceIcon(resourceType.toLowerCase())
                                                         const isHovered = hoveredResource === `${resourceId}-${stepIdx}-${rIdx}`
-                                                        
+
                                                         return (
                                                           <a
                                                             key={rIdx}
@@ -828,22 +852,19 @@ export default function AnalysisPage() {
                                                             rel="noopener noreferrer"
                                                             onMouseEnter={() => setHoveredResource(`${resourceId}-${stepIdx}-${rIdx}`)}
                                                             onMouseLeave={() => setHoveredResource(null)}
-                                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${
-                                                              isHovered
+                                                            className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${isHovered
                                                                 ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300 shadow-md transform -translate-y-0.5'
                                                                 : 'bg-white border-gray-200 hover:border-purple-200'
-                                                            }`}
+                                                              }`}
                                                           >
-                                                            <Icon className={`w-5 h-5 flex-shrink-0 ${
-                                                              isHovered ? 'text-purple-600' : 'text-gray-500'
-                                                            }`} />
+                                                            <Icon className={`w-5 h-5 flex-shrink-0 ${isHovered ? 'text-purple-600' : 'text-gray-500'
+                                                              }`} />
                                                             <div className="flex-1">
                                                               <span className="text-sm font-medium text-gray-700 block">{resourceTitle}</span>
                                                               <span className="text-xs text-gray-500">{resourceType}</span>
                                                             </div>
-                                                            <ExternalLink className={`w-4 h-4 ${
-                                                              isHovered ? 'text-purple-600' : 'text-gray-400'
-                                                            }`} />
+                                                            <ExternalLink className={`w-4 h-4 ${isHovered ? 'text-purple-600' : 'text-gray-400'
+                                                              }`} />
                                                           </a>
                                                         )
                                                       })}
@@ -867,7 +888,7 @@ export default function AnalysisPage() {
                                   </button>
                                 )}
                               </div>
-                              
+
                               {/* Resources Section (Legacy support) */}
                               {item.resources && isExpanded && (
                                 <div className="mt-4 pt-4 border-t border-purple-100 animate-fade-in">
@@ -883,7 +904,7 @@ export default function AnalysisPage() {
                                       const resourceUrl = resource.link || formatResourceLink(resource).url
                                       const Icon = getResourceIcon(resourceType.toLowerCase())
                                       const isHovered = hoveredResource === `${resourceId}-${rIdx}`
-                                      
+
                                       return (
                                         <a
                                           key={rIdx}
@@ -892,22 +913,19 @@ export default function AnalysisPage() {
                                           rel="noopener noreferrer"
                                           onMouseEnter={() => setHoveredResource(`${resourceId}-${rIdx}`)}
                                           onMouseLeave={() => setHoveredResource(null)}
-                                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${
-                                            isHovered
+                                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 ${isHovered
                                               ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-300 shadow-md transform -translate-y-0.5'
                                               : 'bg-gray-50 border-gray-200 hover:border-purple-200'
-                                          }`}
+                                            }`}
                                         >
-                                          <Icon className={`w-5 h-5 flex-shrink-0 ${
-                                            isHovered ? 'text-purple-600' : 'text-gray-500'
-                                          }`} />
+                                          <Icon className={`w-5 h-5 flex-shrink-0 ${isHovered ? 'text-purple-600' : 'text-gray-500'
+                                            }`} />
                                           <div className="flex-1">
                                             <span className="text-sm font-medium text-gray-700 block">{resourceTitle}</span>
                                             <span className="text-xs text-gray-500">{resourceType}</span>
                                           </div>
-                                          <ExternalLink className={`w-4 h-4 ${
-                                            isHovered ? 'text-purple-600' : 'text-gray-400'
-                                          }`} />
+                                          <ExternalLink className={`w-4 h-4 ${isHovered ? 'text-purple-600' : 'text-gray-400'
+                                            }`} />
                                         </a>
                                       )
                                     })}
@@ -925,96 +943,109 @@ export default function AnalysisPage() {
                     <div className="animate-fade-in">
                       {getAnalysisData().recommended_action_plan?.medium_term_development && (
                         <div className="space-y-6">
-                          {/* Check if medium_term_development is an array or object */}
-                          {Array.isArray(getAnalysisData().recommended_action_plan?.medium_term_development) ? (
-                            // Handle array structure
-                            getAnalysisData().recommended_action_plan?.medium_term_development?.specific_actions.map((phase: any, phaseIdx: number) => (
-                              <div key={phaseIdx} className="space-y-4">
-                                {/* Timeline Header for each phase */}
-                                {/* {console.log('Medium Term Development:', phase)} */}
+                          {/* Check if is string array (new format) */}
+                          {Array.isArray(getAnalysisData().recommended_action_plan.medium_term_development) && typeof getAnalysisData().recommended_action_plan.medium_term_development[0] === 'string' ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {getAnalysisData().recommended_action_plan.medium_term_development.map((item: string, idx: number) => (
+                                <div key={idx} className="bg-white border border-blue-100 rounded-xl p-5 hover:shadow-lg transition-all duration-300">
+                                  <div className="flex items-start gap-3">
+                                    <Calendar className="w-6 h-6 text-blue-500 flex-shrink-0 mt-0.5" />
+                                    <p className="text-gray-700 font-medium">{item}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) :
+                            /* Check if medium_term_development is an array of objects or object */
+                            Array.isArray(getAnalysisData().recommended_action_plan?.medium_term_development) ? (
+                              // Handle array structure
+                              getAnalysisData().recommended_action_plan?.medium_term_development?.specific_actions?.map((phase: any, phaseIdx: number) => (
+                                <div key={phaseIdx} className="space-y-4">
+                                  {/* Timeline Header for each phase */}
+                                  {/* {console.log('Medium Term Development:', phase)} */}
+                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
+                                    <div className="flex items-center gap-3 mb-3">
+                                      <Calendar className="w-6 h-6 text-blue-600" />
+                                      <h3 className="text-xl font-bold text-gray-800">
+                                        Development Phase {phaseIdx + 1}
+                                      </h3>
+                                    </div>
+                                    <p className="text-gray-600 text-sm mb-2">
+                                      <span className="text-gray-500">Duration:</span> {phase.timeline || '3-6 months'}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                      <h4 className='font-semibold text-md text-gray-800'>{phase.goal}</h4>
+                                    </div>
+                                  </div>
+
+                                  {/* Topics Grid for this phase */}
+                                  {phase.specific_topics && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                      {phase.specific_topics.map((topic: any, idx: number) => (
+                                        <div
+                                          key={idx}
+                                          className="group relative bg-white border border-blue-100 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                                        >
+                                          <div className="absolute top-3 right-3">
+                                            <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                              {idx + 1}
+                                            </div>
+                                          </div>
+                                          <GitBranch className="w-8 h-8 text-blue-500 mb-3" />
+                                          <h4 className="font-semibold text-gray-800 mb-2 pr-8">
+                                            {typeof topic === 'object' ? (topic?.topic || topic?.description || JSON.stringify(topic)) : topic}
+                                          </h4>
+                                          <div className="mt-3 pt-3 border-t border-gray-100">
+                                            <span className="text-xs text-gray-500">Phase {phaseIdx + 1} Topic</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))
+                            ) : (
+                              // Handle object structure (backward compatibility)
+                              <>
+                                {/* Timeline Header */}
                                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
                                   <div className="flex items-center gap-3 mb-3">
                                     <Calendar className="w-6 h-6 text-blue-600" />
-                                    <h3 className="text-xl font-bold text-gray-800">
-                                      Development Phase {phaseIdx + 1}
-                                    </h3>
+                                    <h3 className="text-xl font-bold text-gray-800">Development Timeline</h3>
                                   </div>
-                                  <p className="text-gray-600 text-sm mb-2">
-                                    <span className="text-gray-500">Duration:</span> {phase.timeline || '3-6 months'}
+                                  <p className="text-gray-600 mb-2">
+                                    <span className="font-semibold">Duration:</span> {getAnalysisData().recommended_action_plan?.medium_term_development?.timeline || '3-6 months'}
                                   </p>
                                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <h4 className='font-semibold text-md text-gray-800'>{phase.goal}</h4>
+                                    <Clock className="w-4 h-4" />
+                                    <span>Consistent practice and dedication required</span>
                                   </div>
                                 </div>
 
-                                {/* Topics Grid for this phase */}
-                                {phase.specific_topics && (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {phase.specific_topics.map((topic: any, idx: number) => (
-                                      <div
-                                        key={idx}
-                                        className="group relative bg-white border border-blue-100 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                                      >
-                                        <div className="absolute top-3 right-3">
-                                          <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                            {idx + 1}
-                                          </div>
-                                        </div>
-                                        <GitBranch className="w-8 h-8 text-blue-500 mb-3" />
-                                        <h4 className="font-semibold text-gray-800 mb-2 pr-8">
-                                          {typeof topic === 'object' ? (topic?.topic || topic?.description || JSON.stringify(topic)) : topic}
-                                        </h4>
-                                        <div className="mt-3 pt-3 border-t border-gray-100">
-                                          <span className="text-xs text-gray-500">Phase {phaseIdx + 1} Topic</span>
+                                {/* Topics Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {(getAnalysisData().recommended_action_plan?.medium_term_development?.specific_topics || []).map((topic: any, idx: number) => (
+                                    <div
+                                      key={idx}
+                                      className="group relative bg-white border border-blue-100 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                                    >
+                                      <div className="absolute top-3 right-3">
+                                        <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                          {idx + 1}
                                         </div>
                                       </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))
-                          ) : (
-                            // Handle object structure (backward compatibility)
-                            <>
-                              {/* Timeline Header */}
-                              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
-                                <div className="flex items-center gap-3 mb-3">
-                                  <Calendar className="w-6 h-6 text-blue-600" />
-                                  <h3 className="text-xl font-bold text-gray-800">Development Timeline</h3>
-                                </div>
-                                <p className="text-gray-600 mb-2">
-                                  <span className="font-semibold">Duration:</span> {getAnalysisData().recommended_action_plan?.medium_term_development?.timeline || '3-6 months'}
-                                </p>
-                                <div className="flex items-center gap-2 text-sm text-gray-500">
-                                  <Clock className="w-4 h-4" />
-                                  <span>Consistent practice and dedication required</span>
-                                </div>
-                              </div>
-
-                              {/* Topics Grid */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {(getAnalysisData().recommended_action_plan?.medium_term_development?.specific_topics || []).map((topic: any, idx: number) => (
-                                  <div
-                                    key={idx}
-                                    className="group relative bg-white border border-blue-100 rounded-xl p-5 hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-                                  >
-                                    <div className="absolute top-3 right-3">
-                                      <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                        {idx + 1}
+                                      <GitBranch className="w-8 h-8 text-blue-500 mb-3" />
+                                      <h4 className="font-semibold text-gray-800 mb-2 pr-8">
+                                        {typeof topic === 'object' ? (topic?.topic || topic?.description || JSON.stringify(topic)) : topic}
+                                      </h4>
+                                      <div className="mt-3 pt-3 border-t border-gray-100">
+                                        {/* <span className="text-xs text-gray-500">Click to explore resources →</span> */}
                                       </div>
                                     </div>
-                                    <GitBranch className="w-8 h-8 text-blue-500 mb-3" />
-                                    <h4 className="font-semibold text-gray-800 mb-2 pr-8">
-                                      {typeof topic === 'object' ? (topic?.topic || topic?.description || JSON.stringify(topic)) : topic}
-                                    </h4>
-                                    <div className="mt-3 pt-3 border-t border-gray-100">
-                                      {/* <span className="text-xs text-gray-500">Click to explore resources →</span> */}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </>
-                          )}
+                                  ))}
+                                </div>
+                              </>
+                            )}
 
                           {/* Resources Section - works for both structures */}
                           {getAnalysisData().recommended_action_plan?.medium_term_development?.resources && (
@@ -1027,7 +1058,7 @@ export default function AnalysisPage() {
                                 {getAnalysisData().recommended_action_plan?.medium_term_development?.resources.map((resource: string, rIdx: number) => {
                                   const resourceLink = formatResourceLink(resource)
                                   const Icon = getResourceIcon(resourceLink.type)
-                                  
+
                                   return (
                                     <a
                                       key={rIdx}
@@ -1063,38 +1094,38 @@ export default function AnalysisPage() {
                               These recommendations will help you maximize your existing strengths to accelerate your learning journey.
                             </p>
                           </div>
-                          
+
                           <div className="grid grid-cols-1 gap-4">
-                            {(Array.isArray(getAnalysisData().recommended_action_plan?.strength_utilization) 
+                            {(Array.isArray(getAnalysisData().recommended_action_plan?.strength_utilization)
                               ? getAnalysisData().recommended_action_plan?.strength_utilization
                               : []).map((recommendation: any, idx: number) => (
-                              <div
-                                key={idx}
-                                className="group relative overflow-hidden bg-white border border-green-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300"
-                              >
-                                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-400 to-emerald-400"></div>
-                                <div className="flex items-start gap-4 ml-2">
-                                  <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex-shrink-0">
-                                    <span className="text-green-600 font-bold">{idx + 1}</span>
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-gray-700 leading-relaxed">
-                                      {typeof recommendation === 'object' 
-                                        ? (recommendation?.recommendation || recommendation?.strength || JSON.stringify(recommendation))
-                                        : recommendation
-                                      }
-                                    </p>
-                                    <div className="mt-3 flex items-center gap-2">
-                                      <CheckCircle className="w-4 h-4 text-green-500" />
-                                      <span className="text-sm text-green-600 font-medium">Action Item</span>
+                                <div
+                                  key={idx}
+                                  className="group relative overflow-hidden bg-white border border-green-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300"
+                                >
+                                  <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-green-400 to-emerald-400"></div>
+                                  <div className="flex items-start gap-4 ml-2">
+                                    <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full flex-shrink-0">
+                                      <span className="text-green-600 font-bold">{idx + 1}</span>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-gray-700 leading-relaxed">
+                                        {typeof recommendation === 'object'
+                                          ? (recommendation?.recommendation || recommendation?.strength || JSON.stringify(recommendation))
+                                          : recommendation
+                                        }
+                                      </p>
+                                      <div className="mt-3 flex items-center gap-2">
+                                        <CheckCircle className="w-4 h-4 text-green-500" />
+                                        <span className="text-sm text-green-600 font-medium">Action Item</span>
+                                      </div>
+                                    </div>
+                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Rocket className="w-6 h-6 text-green-500 animate-bounce" />
                                     </div>
                                   </div>
-                                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Rocket className="w-6 h-6 text-green-500 animate-bounce" />
-                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
                           </div>
                         </>
                       )}

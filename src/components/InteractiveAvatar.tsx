@@ -37,7 +37,7 @@ import { SessionUtils } from "@/lib/sessionUtils";
 
 const DEFAULT_CONFIG: StartAvatarRequest = {
   quality: AvatarQuality.High,
-  avatarName: "Marianne_Chair_Sitting_public",
+  avatarName: "Rika_Chair_Sitting_public",
   knowledgeId: "06e3ca82cd9c476b837d1660fa810494",
   voice: {
     rate: 1.5,
@@ -326,45 +326,45 @@ function InteractiveAvatar() {
       };
     }
     const fetchSessionQuestions = async () => {
-          const sessionInfo = SessionUtils.getSessionInfo()
-          if (sessionInfo.sessionId) {
-            setSessionId(sessionInfo.sessionId)
-            console.log('📋 Session ID found:', sessionInfo.sessionId, 'from', sessionInfo.source)
-            
-            // If questions are not already in context, fetch from session
-            if (!questions) {
-              try {
-                console.log('🔍 Fetching questions from session...')
-                const response = await fetch(`/api/interview-sessions/${sessionInfo.sessionId}/questions`);
-                const data = await response.json();
-                console.log(data);
-                
-                if (data.success) {
-                  if (data.data.items) {
-                    console.log('✅ Questions loaded from session:', data.data.items)
-                    setQuestions(data.data.items)
-                  } else {
-                    console.log('ℹ️ No questions found in session')
-                  }
-                } else {
-                  console.warn('⚠️ Failed to fetch questions from session:', response.status)
-                }
-              } catch (error) {
-                console.error('❌ Error fetching session questions:', error)
+      const sessionInfo = SessionUtils.getSessionInfo()
+      if (sessionInfo.sessionId) {
+        setSessionId(sessionInfo.sessionId)
+        console.log('📋 Session ID found:', sessionInfo.sessionId, 'from', sessionInfo.source)
+
+        // If questions are not already in context, fetch from session
+        if (!questions) {
+          try {
+            console.log('🔍 Fetching questions from session...')
+            const response = await fetch(`/api/interview-sessions/${sessionInfo.sessionId}/questions`);
+            const data = await response.json();
+            console.log(data);
+
+            if (data.success) {
+              if (data.data.items) {
+                console.log('✅ Questions loaded from session:', data.data.items)
+                setQuestions(data.data.items)
+              } else {
+                console.log('ℹ️ No questions found in session')
               }
             } else {
-              console.log('✅ Questions already available in context')
+              console.warn('⚠️ Failed to fetch questions from session:', response.status)
             }
-          } else {
-            console.warn('⚠️ No session ID found. QA pairs will not be saved to database.')
+          } catch (error) {
+            console.error('❌ Error fetching session questions:', error)
           }
-          setIsLoadingQuestions(false)
+        } else {
+          console.log('✅ Questions already available in context')
         }
-    
-        fetchSessionQuestions()
-  }, [mediaStream, stream,questions, setQuestions]);
+      } else {
+        console.warn('⚠️ No session ID found. QA pairs will not be saved to database.')
+      }
+      setIsLoadingQuestions(false)
+    }
 
-    // Show loading state while fetching questions
+    fetchSessionQuestions()
+  }, [mediaStream, stream, questions, setQuestions]);
+
+  // Show loading state while fetching questions
   if (isLoadingQuestions) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -415,7 +415,7 @@ function InteractiveAvatar() {
       setCameraEnabled(true);
 
       const questions = formattedQuestions;
-      const fullprompt = `You are an AI voice assistant conducting interviews. Your job is to ask candidates provided interview questions, assess their responses. Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example: Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. Below Are the Questions:`+questions+` If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example: "Need a hint? Think about how React tracks component updates!" Provide brief, encouraging feedback after each answer. Example: "Nice! That's a solid answer." "Hmm, not quite! Want to try again?" Keep the conversational natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!" After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example: "That was great! You handled some tough questions well. Keep sharpening your skills!" End on a positive note:  "Thanks for chatting! Hope to see you crushing projects soon!" Key Guidelines: ✅ Be friendly, engaging, and witty 🎤 ✅ Keep responses short and natural, like a real conversation ✅ Adapt based on the candidate's confidence level`
+      const fullprompt = `You are an AI voice assistant conducting interviews. Your job is to ask candidates provided interview questions, assess their responses. Begin the conversation with a friendly introduction, setting a relaxed yet professional tone. Example: Ask one question at a time and wait for the candidate's response before proceeding. Keep the questions clear and concise. Below Are the Questions:` + questions + ` If the candidate struggles, offer hints or rephrase the question without giving away the answer. Example: "Need a hint? Think about how React tracks component updates!" Provide brief, encouraging feedback after each answer. Example: "Nice! That's a solid answer." "Hmm, not quite! Want to try again?" Keep the conversational natural and engaging—use casual phrases like "Alright, next up..." or "Let's tackle a tricky one!" After 5-7 questions, wrap up the interview smoothly by summarizing their performance. Example: "That was great! You handled some tough questions well. Keep sharpening your skills!" End on a positive note:  "Thanks for chatting! Hope to see you crushing projects soon!" Key Guidelines: ✅ Be friendly, engaging, and witty 🎤 ✅ Keep responses short and natural, like a real conversation ✅ Adapt based on the candidate's confidence level`
       const url = `https://api.heygen.com/v1/streaming/knowledge_base/${DEFAULT_CONFIG.knowledgeId}`;
       const options = {
         method: 'POST',
@@ -430,13 +430,13 @@ function InteractiveAvatar() {
           opening: "Hey there! I'm excited to interview you  and get to know your skills a little better—let's dive into some questions and see where this takes us!"
         })
       };
-      
+
       const response = await fetch(url, options);
-      
+
       const data = await response.json();
       console.log(data);
-      
-      
+
+
       startSessionV2(true);
     } catch (err) {
       console.error('Error:', err);
@@ -454,60 +454,60 @@ function InteractiveAvatar() {
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white py-10 px-4">
       <div className="max-w-screen flex flex-col gap-6">
         <div className="relative rounded-[32px] border border-white/10 bg-black/60 shadow-2xl overflow-hidden">
-            <div className=" inset-0 bg-gradient-to-br from-slate-900/70 to-slate-800/30" />
-            <div className="relative w-full aspect-video flex items-center justify-center">
-              {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
-                <AvatarVideo ref={mediaStream} />
-              ) : (
-                <div className="flex flex-col items-center gap-3 text-center px-6">
-                  <p className="text-2xl font-semibold">Ready to go live</p>
-                  <p className="text-white/70 max-w-md">
-                    Start the interview to connect with your AI interviewer. Your camera preview
-                    appears in the corner just like Google Meet.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="absolute top-4 left-4 bg-white/10 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
-              {sessionState === StreamingAvatarSessionState.CONNECTED
-                ? "Interview in progress"
-                : sessionState === StreamingAvatarSessionState.CONNECTING
-                  ? "Connecting to interviewer"
-                  : "Waiting to start"}
-            </div>
-
-            <div className="absolute bottom-4 right-4 w-48 aspect-video rounded-2xl border border-white/20 bg-black/80 overflow-hidden shadow-2xl flex items-center justify-center">
-              {localStream ? (
-                <>
-                  <video
-                    ref={userVideoRef}
-                    autoPlay
-                    muted
-                    playsInline
-                    className={`h-full w-full object-cover ${cameraEnabled ? "opacity-100" : "opacity-40 grayscale"} scale-x-[-1]`}
-                  />
-                  {!cameraEnabled && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-xs font-semibold tracking-wide uppercase">
-                      Camera off
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-white/70 px-4 text-center">Waiting for camera…</p>
-              )}
-            </div>
-
-            {userMediaError && (
-              <div className="absolute inset-x-0 bottom-0 bg-rose-600/70 backdrop-blur text-sm px-4 py-3 flex flex-col gap-2">
-                <span>{userMediaError}</span>
-                <div>
-                  <Button className="!bg-white/20 !text-white" onClick={requestLocalStream}>
-                    Retry permissions
-                  </Button>
-                </div>
+          <div className=" inset-0 bg-gradient-to-br from-slate-900/70 to-slate-800/30" />
+          <div className="relative w-full aspect-video flex items-center justify-center">
+            {sessionState !== StreamingAvatarSessionState.INACTIVE ? (
+              <AvatarVideo ref={mediaStream} />
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-center px-6">
+                <p className="text-2xl font-semibold">Ready to go live</p>
+                <p className="text-white/70 max-w-md">
+                  Start the interview to connect with your AI interviewer. Your camera preview
+                  appears in the corner just like Google Meet.
+                </p>
               </div>
             )}
+          </div>
+
+          <div className="absolute top-4 left-4 bg-white/10 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
+            {sessionState === StreamingAvatarSessionState.CONNECTED
+              ? "Interview in progress"
+              : sessionState === StreamingAvatarSessionState.CONNECTING
+                ? "Connecting to interviewer"
+                : "Waiting to start"}
+          </div>
+
+          <div className="absolute bottom-4 right-4 w-48 aspect-video rounded-2xl border border-white/20 bg-black/80 overflow-hidden shadow-2xl flex items-center justify-center">
+            {localStream ? (
+              <>
+                <video
+                  ref={userVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className={`h-full w-full object-cover ${cameraEnabled ? "opacity-100" : "opacity-40 grayscale"} scale-x-[-1]`}
+                />
+                {!cameraEnabled && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-xs font-semibold tracking-wide uppercase">
+                    Camera off
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-white/70 px-4 text-center">Waiting for camera…</p>
+            )}
+          </div>
+
+          {userMediaError && (
+            <div className="absolute inset-x-0 bottom-0 bg-rose-600/70 backdrop-blur text-sm px-4 py-3 flex flex-col gap-2">
+              <span>{userMediaError}</span>
+              <div>
+                <Button className="!bg-white/20 !text-white" onClick={requestLocalStream}>
+                  Retry permissions
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-[32px] backdrop-blur-xl px-6 py-5 flex flex-col gap-4">
@@ -526,9 +526,8 @@ function InteractiveAvatar() {
               <button
                 onClick={handleMicToggle}
                 disabled={isVoiceChatLoading}
-                className={`h-12 w-12 rounded-full flex items-center justify-center text-white transition-all ${
-                  isMuted ? "bg-rose-600 hover:bg-rose-500" : "bg-white/20 hover:bg-white/30"
-                } ${isVoiceChatLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`h-12 w-12 rounded-full flex items-center justify-center text-white transition-all ${isMuted ? "bg-rose-600 hover:bg-rose-500" : "bg-white/20 hover:bg-white/30"
+                  } ${isVoiceChatLoading ? "opacity-50 cursor-not-allowed" : ""}`}
                 aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
               >
                 {isMuted ? <MicOffIcon size={22} /> : <MicIcon size={22} />}
@@ -536,9 +535,8 @@ function InteractiveAvatar() {
 
               <button
                 onClick={handleCameraToggle}
-                className={`h-12 w-12 rounded-full flex items-center justify-center text-white transition-all ${
-                  cameraEnabled ? "bg-white/20 hover:bg-white/30" : "bg-rose-600 hover:bg-rose-500"
-                }`}
+                className={`h-12 w-12 rounded-full flex items-center justify-center text-white transition-all ${cameraEnabled ? "bg-white/20 hover:bg-white/30" : "bg-rose-600 hover:bg-rose-500"
+                  }`}
                 aria-label={cameraEnabled ? "Turn camera off" : "Turn camera on"}
               >
                 {cameraEnabled ? <CameraIcon size={22} /> : <CameraOffIcon size={22} />}
@@ -548,11 +546,10 @@ function InteractiveAvatar() {
                 <button
                   onClick={handleEndInterview}
                   disabled={isEndingInterview}
-                  className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${
-                    isEndingInterview
-                      ? "bg-rose-600/60 cursor-wait"
-                      : "bg-rose-600 hover:bg-rose-500"
-                  }`}
+                  className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${isEndingInterview
+                    ? "bg-rose-600/60 cursor-wait"
+                    : "bg-rose-600 hover:bg-rose-500"
+                    }`}
                   aria-label="Leave interview"
                 >
                   {isEndingInterview ? <LoadingIcon size={18} /> : <PhoneOffIcon size={22} />}
