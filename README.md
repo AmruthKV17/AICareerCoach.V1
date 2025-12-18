@@ -71,3 +71,26 @@ CREWAI_CONFIG_PATH=./config/crews
 npm run dev
 
 Then open `http://localhost:3000` and start a mock interview or upload a resume to see the agents in action. 
+
+**Screenshots**
+
+1. Home page
+
+<img width="668" height="502" alt="Screenshot 2025-12-06 015133" src="https://github.com/user-attachments/assets/3fa97227-ed09-4d3b-b938-f39f033216af" />
+
+2. Interview with AI
+
+<img width="1647" height="897" alt="Screenshot 2025-12-06 013726" src="https://github.com/user-attachments/assets/919ec546-a81d-47ee-af83-1eacf723614f" />
+
+3. Evaluation results
+
+<img width="811" height="778" alt="Screenshot 2025-12-06 015108" src="https://github.com/user-attachments/assets/e8bde408-7273-4d3d-b713-932d9d9c6879" />
+
+4. Resume Optimization
+
+<img width="726" height="764" alt="Screenshot 2025-12-06 000313" src="https://github.com/user-attachments/assets/81930559-c9ca-48d9-939f-512a1daeb21a" />
+
+5. Industry Insights
+
+<img width="791" height="717" alt="Screenshot 2025-12-06 014658" src="https://github.com/user-attachments/assets/dfbc3efa-726e-4546-8c13-f941f3808dd6" />
+
