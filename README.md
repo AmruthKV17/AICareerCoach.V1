@@ -39,3 +39,21 @@ An AI-powered career coaching platform that simulates real interview experiences
 
 > Note: Replace placeholder keys with your own credentials.
 
+**1. Install dependencies**
+npm install
+
+**2. Configure environment**
+cp .env.example .env.local
+
+Fill in:
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+VAPI_API_KEY=
+HEYGEN_API_KEY=
+OPENAI_API_KEY= (or other LLM provider)
+CREWAI_CONFIG_PATH=./config/crews
+
+**3. Run the dev server**
+npm run dev
+
+Then open `http://localhost:3000` and start a mock interview or upload a resume to see the agents in action. 
