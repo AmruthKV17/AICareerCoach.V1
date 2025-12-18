@@ -1,4 +1,6 @@
 # AI Career Coach Platform
+<img width="1647" height="897" alt="Screenshot 2025-12-06 013726" src="https://github.com/user-attachments/assets/e0296792-bef6-44f0-9dcd-3293cdac7723" />
+
 
 An AI-powered career coaching platform that simulates real interview experiences and optimizes resumes using a multi‑agent architecture built on **Next.js**, **TypeScript**, **CrewAI**, **VAPI**, **HeyGen**, and **Clerk Auth**.
 
